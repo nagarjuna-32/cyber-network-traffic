@@ -45,7 +45,7 @@ import torch
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from models.temporal.world_model import (
+from models.temporal.lstm import (
     NetworkStateGRU,
     STATE_LABELS,
     NUM_FEATURES,

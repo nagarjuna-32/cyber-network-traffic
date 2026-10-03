@@ -14,7 +14,7 @@ Example
 >>> print(result["current_state"], result["predicted_next_state"])
 """
 
-from models.temporal.world_model import NetworkStateGRU as WorldModel
+from models.temporal.lstm import NetworkStateGRU as WorldModel
 from models.temporal.inference import load_world_model, predict
 
 __all__ = ["WorldModel", "load_world_model", "predict"]

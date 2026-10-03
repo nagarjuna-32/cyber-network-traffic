@@ -40,7 +40,7 @@ import torch
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from models.temporal.world_model import NetworkStateGRU, STATE_LABELS, NUM_FEATURES, FEATURE_COLUMNS
+from models.temporal.lstm import NetworkStateGRU, STATE_LABELS, NUM_FEATURES, FEATURE_COLUMNS
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Default checkpoint locations (matches train.py)

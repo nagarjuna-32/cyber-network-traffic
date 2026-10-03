@@ -52,7 +52,7 @@ from simulation.beaconing import generate_beaconing
 from simulation.ddos import generate_ddos
 from simulation.common import LADDER_STATES, FEATURE_COLUMNS
 
-from models.temporal.world_model import NetworkStateGRU, STATE_LABELS, NUM_FEATURES, Log1pStandardScaler
+from models.temporal.lstm import NetworkStateGRU, STATE_LABELS, NUM_FEATURES, Log1pStandardScaler
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Constants
