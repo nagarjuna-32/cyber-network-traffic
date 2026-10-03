@@ -194,13 +194,22 @@ def predict(
     curr_idx = int(np.argmax(prob_curr))
     next_idx = int(np.argmax(prob_next))
 
+    future_states = [STATE_LABELS[next_idx]]
+    current_proj = next_idx
+    for _ in range(2):
+        if current_proj < len(STATE_LABELS) - 1 and prob_next[current_proj] > 0.3:
+            current_proj = min(current_proj + 1, len(STATE_LABELS) - 1)
+        future_states.append(STATE_LABELS[current_proj])
+
     return {
         "current_state": STATE_LABELS[curr_idx],
+        "predicted_state": STATE_LABELS[next_idx],
+        "predicted_next_state": STATE_LABELS[next_idx],
+        "future_states": future_states,
         "current_probabilities": {
             label: round(float(p), 4)
             for label, p in zip(STATE_LABELS, prob_curr)
         },
-        "predicted_next_state":  STATE_LABELS[next_idx],
         "prediction_confidence": round(float(prob_next[next_idx]), 4),
     }
 
@@ -254,13 +263,22 @@ def predict_batch(
             for pc, pn in zip(prob_c, prob_n):
                 ci = int(pc.argmax())
                 ni = int(pn.argmax())
+                fut = [STATE_LABELS[ni]]
+                c_proj = ni
+                for _ in range(2):
+                    if c_proj < len(STATE_LABELS) - 1 and pn[c_proj] > 0.3:
+                        c_proj = min(c_proj + 1, len(STATE_LABELS) - 1)
+                    fut.append(STATE_LABELS[c_proj])
+
                 results.append({
                     "current_state": STATE_LABELS[ci],
+                    "predicted_state": STATE_LABELS[ni],
+                    "predicted_next_state": STATE_LABELS[ni],
+                    "future_states": fut,
                     "current_probabilities": {
                         label: round(float(p), 4)
                         for label, p in zip(STATE_LABELS, pc)
                     },
-                    "predicted_next_state":  STATE_LABELS[ni],
                     "prediction_confidence": round(float(pn[ni]), 4),
                 })
     return results

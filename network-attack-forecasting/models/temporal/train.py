@@ -130,39 +130,46 @@ def load_dataset_from_csv(
     csv_path: str | Path,
     window_size: int = SEQUENCE_LENGTH,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Load temporal sequence windows from a CSV dataset file.
+    """Load continuous temporal sequence windows from a CSV dataset file.
 
+    Preserves original continuous timestamp flow order across all records.
     Returns (X, y_current, y_next) numpy arrays.
     """
     import pandas as pd
 
-    csv_path = Path(csv_path)
-    if not csv_path.exists():
+    p = Path(csv_path)
+    if not p.exists():
+        candidates = [
+            PROJECT_ROOT.parent / p.name,
+            PROJECT_ROOT / p.name,
+            PROJECT_ROOT.parent / csv_path,
+        ]
+        for c in candidates:
+            if c.exists():
+                p = c
+                break
+
+    if not p.exists():
         raise FileNotFoundError(f"Dataset CSV file not found: {csv_path}")
 
-    df = pd.read_csv(csv_path)
+    df = pd.read_csv(p)
     missing = [c for c in FEATURE_COLUMNS + ["state"] if c not in df.columns]
     if missing:
         raise ValueError(f"CSV missing required columns: {missing}")
 
+    rows = df.to_dict("records")
+    n = len(rows)
     all_X, all_yc, all_yn = [], [], []
-    if "scenario" in df.columns:
-        groups = [group for _, group in df.groupby("scenario", sort=False)]
-    else:
-        groups = [df]
 
-    for group in groups:
-        rows = group.to_dict("records")
-        n = len(rows)
-        for start in range(n - window_size):
-            end = start + window_size
-            window = [
-                [r[col] for col in FEATURE_COLUMNS]
-                for r in rows[start:end]
-            ]
-            all_X.append(window)
-            all_yc.append(STATE_TO_IDX[rows[end - 1]["state"]])
-            all_yn.append(STATE_TO_IDX[rows[end]["state"]])
+    for start in range(n - window_size):
+        end = start + window_size
+        window = [
+            [r[col] for col in FEATURE_COLUMNS]
+            for r in rows[start:end]
+        ]
+        all_X.append(window)
+        all_yc.append(STATE_TO_IDX[rows[end - 1]["state"]])
+        all_yn.append(STATE_TO_IDX[rows[end]["state"]])
 
     X  = np.array(all_X,  dtype=np.float32)
     yc = np.array(all_yc, dtype=np.int64)
