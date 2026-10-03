@@ -126,6 +126,50 @@ def build_dataset(
     return X, yc, yn
 
 
+def load_dataset_from_csv(
+    csv_path: str | Path,
+    window_size: int = SEQUENCE_LENGTH,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Load temporal sequence windows from a CSV dataset file.
+
+    Returns (X, y_current, y_next) numpy arrays.
+    """
+    import pandas as pd
+
+    csv_path = Path(csv_path)
+    if not csv_path.exists():
+        raise FileNotFoundError(f"Dataset CSV file not found: {csv_path}")
+
+    df = pd.read_csv(csv_path)
+    missing = [c for c in FEATURE_COLUMNS + ["state"] if c not in df.columns]
+    if missing:
+        raise ValueError(f"CSV missing required columns: {missing}")
+
+    all_X, all_yc, all_yn = [], [], []
+    if "scenario" in df.columns:
+        groups = [group for _, group in df.groupby("scenario", sort=False)]
+    else:
+        groups = [df]
+
+    for group in groups:
+        rows = group.to_dict("records")
+        n = len(rows)
+        for start in range(n - window_size):
+            end = start + window_size
+            window = [
+                [r[col] for col in FEATURE_COLUMNS]
+                for r in rows[start:end]
+            ]
+            all_X.append(window)
+            all_yc.append(STATE_TO_IDX[rows[end - 1]["state"]])
+            all_yn.append(STATE_TO_IDX[rows[end]["state"]])
+
+    X  = np.array(all_X,  dtype=np.float32)
+    yc = np.array(all_yc, dtype=np.int64)
+    yn = np.array(all_yn, dtype=np.int64)
+    return X, yc, yn
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Training utilities
 # ─────────────────────────────────────────────────────────────────────────────
@@ -202,6 +246,7 @@ def train(
     patience: int = 5,
     use_cuda: bool = True,
     total_per_scenario: int = 3000,
+    csv_path: str | Path | None = None,
 ) -> None:
     print("=" * 65)
     print("  NetForecast AI — Temporal World Model Training")
@@ -219,26 +264,42 @@ def train(
     print(f"  Seed        : {seed}")
     print(f"  Epochs (max): {epochs}  |  Patience: {patience}")
 
-    # ── Generate data ────────────────────────────────────────────────
-    print("\n[1/5] Generating synthetic sequences ...")
-    t0 = time.time()
-    sequences = generate_all_sequences(rng, total_per_scenario)
-    print(f"      {len(sequences):,} sequences generated in {time.time()-t0:.1f}s")
+    # ── Load or Generate data ─────────────────────────────────────────
+    if csv_path is not None:
+        print(f"\n[1/5] Loading sequences from CSV dataset: {csv_path} ...")
+        t0 = time.time()
+        X_all, yc_all, yn_all = load_dataset_from_csv(csv_path, SEQUENCE_LENGTH)
+        print(f"      {len(X_all):,} temporal window samples extracted in {time.time()-t0:.1f}s")
 
-    # ── Strict chronological split (NO shuffle) ───────────────────────
-    n = len(sequences)
-    train_end = int(n * 0.70)
-    val_end   = int(n * 0.85)
-    seq_train = sequences[:train_end]
-    seq_val   = sequences[train_end:val_end]
-    seq_test  = sequences[val_end:]
-    print(f"\n[2/5] Chronological split (no leakage)")
-    print(f"      Train: {len(seq_train):,} seqs | Val: {len(seq_val):,} | Test: {len(seq_test):,}")
+        n = len(X_all)
+        train_end = int(n * 0.70)
+        val_end   = int(n * 0.85)
 
-    # ── Build windowed datasets ───────────────────────────────────────
-    X_tr, yc_tr, yn_tr = build_dataset(seq_train, SEQUENCE_LENGTH)
-    X_va, yc_va, yn_va = build_dataset(seq_val,   SEQUENCE_LENGTH)
-    X_te, yc_te, yn_te = build_dataset(seq_test,  SEQUENCE_LENGTH)
+        X_tr, yc_tr, yn_tr = X_all[:train_end], yc_all[:train_end], yn_all[:train_end]
+        X_va, yc_va, yn_va = X_all[train_end:val_end], yc_all[train_end:val_end], yn_all[train_end:val_end]
+        X_te, yc_te, yn_te = X_all[val_end:], yc_all[val_end:], yn_all[val_end:]
+
+        print(f"\n[2/5] Chronological split (no leakage)")
+        print(f"      Train: {len(X_tr):,} | Val: {len(X_va):,} | Test: {len(X_te):,}")
+    else:
+        print("\n[1/5] Generating synthetic sequences ...")
+        t0 = time.time()
+        sequences = generate_all_sequences(rng, total_per_scenario)
+        print(f"      {len(sequences):,} sequences generated in {time.time()-t0:.1f}s")
+
+        n = len(sequences)
+        train_end = int(n * 0.70)
+        val_end   = int(n * 0.85)
+        seq_train = sequences[:train_end]
+        seq_val   = sequences[train_end:val_end]
+        seq_test  = sequences[val_end:]
+        print(f"\n[2/5] Chronological split (no leakage)")
+        print(f"      Train: {len(seq_train):,} seqs | Val: {len(seq_val):,} | Test: {len(seq_test):,}")
+
+        X_tr, yc_tr, yn_tr = build_dataset(seq_train, SEQUENCE_LENGTH)
+        X_va, yc_va, yn_va = build_dataset(seq_val,   SEQUENCE_LENGTH)
+        X_te, yc_te, yn_te = build_dataset(seq_test,  SEQUENCE_LENGTH)
+
     print(f"      Windows — Train: {len(X_tr):,}  Val: {len(X_va):,}  Test: {len(X_te):,}")
 
     # ── Fit scaler on training data ONLY ─────────────────────────────
@@ -382,12 +443,27 @@ if __name__ == "__main__":
     parser.add_argument("--epochs",   type=int,   default=30,    help="Maximum training epochs")
     parser.add_argument("--seed",     type=int,   default=42,    help="Random seed")
     parser.add_argument("--no-cuda",  action="store_true",       help="Disable GPU even if available")
-    parser.add_argument("--rows",     type=int,   default=3000,  help="Rows per scenario")
+    parser.add_argument("--rows",     type=int,   default=3000,  help="Rows per scenario for synthetic mode")
+    parser.add_argument("--csv",      type=str,   default=None,  help="Path to CSV dataset file (e.g. network_traffic_10000.csv)")
     args = parser.parse_args()
+
+    csv_target = args.csv
+    if csv_target is None:
+        # Check standard locations for network_traffic_10000.csv
+        candidates = [
+            PROJECT_ROOT.parent / "network_traffic_10000.csv",
+            PROJECT_ROOT / "network_traffic_10000.csv",
+            Path("network_traffic_10000.csv"),
+        ]
+        for candidate in candidates:
+            if candidate.exists():
+                csv_target = candidate
+                break
 
     train(
         epochs=args.epochs,
         seed=args.seed,
         use_cuda=not args.no_cuda,
         total_per_scenario=args.rows,
+        csv_path=csv_target,
     )

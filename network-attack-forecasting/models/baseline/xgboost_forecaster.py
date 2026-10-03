@@ -74,6 +74,7 @@ from simulation.common import LADDER_STATES, FEATURE_COLUMNS
 from models.temporal.train import (
     generate_all_sequences,
     build_dataset,
+    load_dataset_from_csv,
     SEQUENCE_LENGTH,
 )
 from models.temporal.lstm import Log1pStandardScaler
@@ -367,6 +368,7 @@ def train(
     max_depth: int     = 6,
     seed: int          = 42,
     total_per_scenario: int = 3000,
+    csv_path: str | Path | None = None,
 ) -> None:
     print("=" * 65)
     print("  NetForecast AI -- XGBoost Temporal Forecaster Training")
@@ -379,24 +381,38 @@ def train(
 
     rng = np.random.default_rng(seed)
 
-    # --- Generate windowed dataset (same as GRU training) ---------------
-    print("\n[1/4] Generating temporal sequence dataset ...")
-    t0 = time.time()
-    sequences = generate_all_sequences(rng, total_per_scenario)
-    print(f"      {len(sequences):,} sequences in {time.time()-t0:.1f}s")
+    # --- Load or Generate windowed dataset -------------------------------
+    if csv_path is not None:
+        print(f"\n[1/4] Loading temporal sequence dataset from CSV: {csv_path} ...")
+        t0 = time.time()
+        X_all, yc_all, yn_all = load_dataset_from_csv(csv_path, SEQUENCE_LENGTH)
+        print(f"      {len(X_all):,} windowed samples extracted in {time.time()-t0:.1f}s")
 
-    # --- Chronological split (no leakage) --------------------------------
-    n         = len(sequences)
-    train_end = int(n * 0.70)
-    val_end   = int(n * 0.85)
-    seq_tr = sequences[:train_end]
-    seq_va = sequences[train_end:val_end]
-    seq_te = sequences[val_end:]
+        n         = len(X_all)
+        train_end = int(n * 0.70)
+        val_end   = int(n * 0.85)
+
+        X_tr, yc_tr, yn_tr = X_all[:train_end], yc_all[:train_end], yn_all[:train_end]
+        X_va, yc_va, yn_va = X_all[train_end:val_end], yc_all[train_end:val_end], yn_all[train_end:val_end]
+        X_te, yc_te, yn_te = X_all[val_end:], yc_all[val_end:], yn_all[val_end:]
+    else:
+        print("\n[1/4] Generating temporal sequence dataset ...")
+        t0 = time.time()
+        sequences = generate_all_sequences(rng, total_per_scenario)
+        print(f"      {len(sequences):,} sequences in {time.time()-t0:.1f}s")
+
+        n         = len(sequences)
+        train_end = int(n * 0.70)
+        val_end   = int(n * 0.85)
+        seq_tr = sequences[:train_end]
+        seq_va = sequences[train_end:val_end]
+        seq_te = sequences[val_end:]
+
+        X_tr, yc_tr, yn_tr = build_dataset(seq_tr, SEQUENCE_LENGTH)
+        X_va, yc_va, yn_va = build_dataset(seq_va, SEQUENCE_LENGTH)
+        X_te, yc_te, yn_te = build_dataset(seq_te, SEQUENCE_LENGTH)
+
     print(f"\n[2/4] Chronological split (no leakage)")
-
-    X_tr, yc_tr, yn_tr = build_dataset(seq_tr, SEQUENCE_LENGTH)
-    X_va, yc_va, yn_va = build_dataset(seq_va, SEQUENCE_LENGTH)
-    X_te, yc_te, yn_te = build_dataset(seq_te, SEQUENCE_LENGTH)
     print(f"      Train: {len(X_tr):,} | Val: {len(X_va):,} | Test: {len(X_te):,} windows")
     print(f"      Each window flattened: ({SEQUENCE_LENGTH} x {NUM_FEATURES}) = {SEQUENCE_LENGTH*NUM_FEATURES} features")
 
@@ -437,11 +453,25 @@ if __name__ == "__main__":
     parser.add_argument("--depth",      type=int,   default=6,    help="Max tree depth")
     parser.add_argument("--seed",       type=int,   default=42,   help="Random seed")
     parser.add_argument("--rows",       type=int,   default=3000, help="Rows per scenario")
+    parser.add_argument("--csv",        type=str,   default=None, help="Path to CSV dataset file")
     args = parser.parse_args()
+
+    csv_target = args.csv
+    if csv_target is None:
+        candidates = [
+            PROJECT_ROOT.parent / "network_traffic_10000.csv",
+            PROJECT_ROOT / "network_traffic_10000.csv",
+            Path("network_traffic_10000.csv"),
+        ]
+        for candidate in candidates:
+            if candidate.exists():
+                csv_target = candidate
+                break
 
     train(
         n_estimators=args.trees,
         max_depth=args.depth,
         seed=args.seed,
         total_per_scenario=args.rows,
+        csv_path=csv_target,
     )

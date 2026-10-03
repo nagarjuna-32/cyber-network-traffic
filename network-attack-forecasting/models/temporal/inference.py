@@ -295,7 +295,7 @@ if __name__ == "__main__":
     labels_true = (["NORMAL"] * 3) + (["ATTACK/SUSPICIOUS"] * 3)
 
     print(f"\n[3/3] Running inference on {len(sample_seqs)} sample sequences ...")
-    print(f"\n{'─'*65}")
+    print(f"\n{'-'*65}")
 
     for i, (seq, true_label) in enumerate(zip(sample_seqs, labels_true)):
         # Take the last SEQUENCE_LENGTH rows as the temporal window
@@ -311,5 +311,5 @@ if __name__ == "__main__":
         print(f"    predicted_next_state : {result['predicted_next_state']}")
         print(f"    prediction_confidence: {result['prediction_confidence']}")
 
-    print(f"\n{'─'*65}")
+    print(f"\n{'-'*65}")
     print("  Smoke test complete — inference interface working correctly.\n")

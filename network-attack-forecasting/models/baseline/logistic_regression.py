@@ -126,6 +126,24 @@ def _generate_flat_dataset(rng: np.random.Generator,
     return X, y
 
 
+def _load_flat_from_csv(csv_path: str | Path) -> tuple[np.ndarray, np.ndarray]:
+    """Load flat (non-windowed) feature matrix and labels from a CSV dataset file."""
+    import pandas as pd
+
+    csv_path = Path(csv_path)
+    if not csv_path.exists():
+        raise FileNotFoundError(f"Dataset CSV file not found: {csv_path}")
+
+    df = pd.read_csv(csv_path)
+    missing = [c for c in FEATURE_COLUMNS + ["state"] if c not in df.columns]
+    if missing:
+        raise ValueError(f"CSV missing required columns: {missing}")
+
+    X = df[FEATURE_COLUMNS].values.astype(np.float32)
+    y = np.array([STATE_TO_IDX[s] for s in df["state"]], dtype=np.int64)
+    return X, y
+
+
 # ---------------------------------------------------------------------------
 # Baseline model wrapper
 # ---------------------------------------------------------------------------
@@ -305,6 +323,7 @@ def train(
     max_iter: int = 1000,
     seed: int = 42,
     total_per_scenario: int = 3000,
+    csv_path: str | Path | None = None,
 ) -> None:
     print("=" * 65)
     print("  NetForecast AI -- Baseline LR Forecaster Training")
@@ -312,11 +331,17 @@ def train(
 
     rng = np.random.default_rng(seed)
 
-    # --- Generate data ---------------------------------------------------
-    print("\n[1/4] Generating flat timestep dataset ...")
-    t0 = time.time()
-    X, y = _generate_flat_dataset(rng, total_per_scenario)
-    print(f"      {len(X):,} timestep samples in {time.time()-t0:.1f}s")
+    # --- Load or Generate data -------------------------------------------
+    if csv_path is not None:
+        print(f"\n[1/4] Loading flat timestep dataset from CSV: {csv_path} ...")
+        t0 = time.time()
+        X, y = _load_flat_from_csv(csv_path)
+        print(f"      {len(X):,} timestep samples loaded in {time.time()-t0:.1f}s")
+    else:
+        print("\n[1/4] Generating flat timestep dataset ...")
+        t0 = time.time()
+        X, y = _generate_flat_dataset(rng, total_per_scenario)
+        print(f"      {len(X):,} timestep samples in {time.time()-t0:.1f}s")
 
     # --- Chronological split (match temporal model protocol) -------------
     n         = len(X)
@@ -369,11 +394,25 @@ if __name__ == "__main__":
     parser.add_argument("--iter",  type=int,   default=1000,  help="Max solver iterations")
     parser.add_argument("--seed",  type=int,   default=42,    help="Random seed")
     parser.add_argument("--rows",  type=int,   default=3000,  help="Rows per scenario")
+    parser.add_argument("--csv",   type=str,   default=None,  help="Path to CSV dataset file")
     args = parser.parse_args()
+
+    csv_target = args.csv
+    if csv_target is None:
+        candidates = [
+            PROJECT_ROOT.parent / "network_traffic_10000.csv",
+            PROJECT_ROOT / "network_traffic_10000.csv",
+            Path("network_traffic_10000.csv"),
+        ]
+        for candidate in candidates:
+            if candidate.exists():
+                csv_target = candidate
+                break
 
     train(
         C=args.C,
         max_iter=args.iter,
         seed=args.seed,
         total_per_scenario=args.rows,
+        csv_path=csv_target,
     )
