@@ -53,7 +53,7 @@ export const Header: React.FC<HeaderProps> = ({
           }`}>
             <Database className="h-3.5 w-3.5" />
             <span>
-              {isDemo ? 'VERIFIED DEMO DATASET' : 'LIVE MODEL INFERENCE'}
+              {isDemo ? 'VERIFIED SAMPLE INPUT' : 'LIVE MODEL INFERENCE'}
             </span>
           </div>
 

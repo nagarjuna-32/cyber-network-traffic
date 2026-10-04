@@ -50,12 +50,12 @@ export const App: React.FC = () => {
     }
   }, []);
 
-  // Initial load
+  // Initial load & scenario changes
   useEffect(() => {
     loadData(currentScenario, isLiveMode);
   }, [currentScenario, isLiveMode, loadData]);
 
-  // Telemetry stream simulation timer
+  // Live telemetry streaming simulation (live tracking ticker)
   useEffect(() => {
     if (!isPolling) return;
 
@@ -65,7 +65,7 @@ export const App: React.FC = () => {
         const nextIdx = (cycle.indexOf(prev) + 1) % cycle.length;
         return cycle[nextIdx];
       });
-    }, 5000);
+    }, 4500);
 
     return () => clearInterval(timer);
   }, [isPolling]);
@@ -85,7 +85,18 @@ export const App: React.FC = () => {
     setIsLoading(true);
     setTimeout(() => {
       setIsLoading(false);
-    }, 1800);
+    }, 2000);
+  };
+
+  const handleApplyCustomJson = (jsonString: string) => {
+    try {
+      const customDecision: SecurityDecision = JSON.parse(jsonString);
+      setDecision(customDecision);
+      setIsLiveMode(false);
+      setApiError(null);
+    } catch (e: unknown) {
+      setApiError(e instanceof Error ? e.message : 'Invalid JSON input');
+    }
   };
 
   return (
@@ -100,7 +111,7 @@ export const App: React.FC = () => {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 space-y-5">
         
         {/* Error / API Alert Banner if any */}
         {apiError && (
@@ -118,20 +129,23 @@ export const App: React.FC = () => {
           </div>
         )}
 
-        {/* 2. Interactive Scenario Test Harness */}
+        {/* 2. Sample Input Presets & Live Controls */}
         <ScenarioControls
           currentScenario={currentScenario}
           onSelectScenario={handleSelectScenario}
           isLiveMode={isLiveMode}
           onToggleLiveMode={handleToggleLiveMode}
           onSimulateLoading={handleSimulateLoading}
+          onApplyCustomJson={handleApplyCustomJson}
+          isPolling={isPolling}
+          onTogglePolling={() => setIsPolling(!isPolling)}
         />
 
         {isLoading ? (
           <LoadingSkeleton />
         ) : (
           <>
-            {/* 3. Suggested Visualization: World Model State Transition Cycle */}
+            {/* 3. World Model State Transition Dynamics (Cycle: NORMAL -> ELEVATED -> SUSPICIOUS -> PREDICTED ATTACK -> ATTACK -> RECOVERY -> NORMAL) */}
             <WorldModelTransition
               currentState={decision?.current_state || 'NORMAL'}
               predictedNextState={decision?.predicted_next_state || 'NORMAL'}
@@ -139,37 +153,40 @@ export const App: React.FC = () => {
               currentConfidence={decision?.confidence ?? 0}
             />
 
-            {/* 4. Display 1-6: Security State Metrics Cards */}
+            {/* 4. Displays 1-6: Security State Metrics Cards */}
             <SecurityStateCards decision={decision || {}} />
 
-            {/* 5. Display 7: Behavioral Evidence & Features */}
-            <EvidencePanel
-              evidence={decision?.evidence}
-              features={decision?.features}
-            />
-
-            {/* 6. Display 8: Traffic & Predictive Behavior Timeline */}
+            {/* 5. Display 8: Traffic & Predictive Behavior Timeline (Nice Smooth Time-Series Graph + Live Tracking) */}
             <TimelineView
               timeline={timeline}
               forecast={decision?.forecast}
             />
 
-            {/* 7. Display 9: Early Warning Alerts & Recommended SOC Playbooks */}
-            <AlertsFeed alerts={alerts} />
+            {/* 6. Display 9: Live Detected Threat Threads & Sockets + Early Warning Alerts */}
+            <AlertsFeed
+              alerts={alerts}
+              threads={decision?.threat_threads}
+            />
+
+            {/* 7. Display 7: Behavioral Evidence & Telemetry Signals */}
+            <EvidencePanel
+              evidence={decision?.evidence}
+              features={decision?.features}
+            />
           </>
         )}
 
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-800/80 bg-slate-950/60 py-4 mt-8">
+      <footer className="border-t border-slate-800/80 bg-slate-950/60 py-3.5 mt-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
           <div className="flex items-center space-x-2">
             <Shield className="h-3.5 w-3.5 text-cyan-400" />
-            <span>NetForecast AI &bull; Smart India Hackathon Problem Statement SIH26153</span>
+            <span>NetForecast AI &bull; SIH26153 Network Attack Forecasting</span>
           </div>
           <div className="font-mono text-[11px] text-slate-400">
-            Contract: Shreenisha &bull; Arch: Nagarjuna &bull; Frontend: React 18 + TypeScript + Tailwind
+            Ownership: feature/dashboard &bull; Shreenisha Prediction Contract &bull; Nagarjuna Architecture
           </div>
         </div>
       </footer>

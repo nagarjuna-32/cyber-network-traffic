@@ -1,4 +1,4 @@
-import { SecurityDecision, SecurityAlert, TimelineObservation } from '../types/prediction';
+import { SecurityDecision, SecurityAlert, TimelineObservation, ThreatThread } from '../types/prediction';
 
 export interface DemoScenario {
   id: string;
@@ -12,8 +12,8 @@ export interface DemoScenario {
 export const MOCK_SCENARIOS: Record<string, DemoScenario> = {
   NORMAL: {
     id: 'NORMAL',
-    name: 'Normal Baseline Traffic',
-    description: 'Clean day-to-day enterprise network communications with steady flow rates.',
+    name: '1. Normal Baseline Traffic',
+    description: 'Clean enterprise network communications with steady flow rates and balanced protocols.',
     decision: {
       timestamp: new Date().toISOString(),
       current_state: 'NORMAL',
@@ -43,27 +43,37 @@ export const MOCK_SCENARIOS: Record<string, DemoScenario> = {
         protocol_breakdown: { tcp: 72, udp: 24, icmp: 2, other: 2 }
       },
       forecast: [
-        { step: 1, time: '+1 min', horizon_seconds: 60, state: 'NORMAL', stage: 'Baseline', threat_score: 9, confidence: 0.94, risk_level: 'LOW' },
-        { step: 2, time: '+2 min', horizon_seconds: 120, state: 'NORMAL', stage: 'Baseline', threat_score: 8, confidence: 0.91, risk_level: 'LOW' },
-        { step: 3, time: '+3 min', horizon_seconds: 180, state: 'NORMAL', stage: 'Baseline', threat_score: 9, confidence: 0.88, risk_level: 'LOW' }
+        { step: 1, time: '+1 min', horizon_seconds: 60, state: 'NORMAL', stage: 'Baseline', threat_score: 8, confidence: 0.95, risk_level: 'LOW' },
+        { step: 2, time: '+2 min', horizon_seconds: 120, state: 'NORMAL', stage: 'Baseline', threat_score: 9, confidence: 0.92, risk_level: 'LOW' },
+        { step: 3, time: '+3 min', horizon_seconds: 180, state: 'NORMAL', stage: 'Baseline', threat_score: 8, confidence: 0.89, risk_level: 'LOW' }
+      ],
+      threat_threads: [
+        { id: 'TH-01', sourceIp: '192.168.1.105', destIp: '1.1.1.1', destPort: 53, protocol: 'UDP', threatStatus: 'BENIGN', flowRate: 45, matchedPattern: 'Standard DNS resolver query', lastSeen: 'Just now' },
+        { id: 'TH-02', sourceIp: '192.168.1.120', destIp: '142.250.190.46', destPort: 443, protocol: 'TCP', threatStatus: 'BENIGN', flowRate: 180, matchedPattern: 'Valid TLS 1.3 session', lastSeen: 'Just now' },
+        { id: 'TH-03', sourceIp: '192.168.1.1', destIp: '129.6.15.28', destPort: 123, protocol: 'UDP', threatStatus: 'BENIGN', flowRate: 8, matchedPattern: 'NTP time synchronization', lastSeen: '4s ago' },
+        { id: 'TH-04', sourceIp: '192.168.1.45', destIp: '192.168.1.10', destPort: 445, protocol: 'TCP', threatStatus: 'BENIGN', flowRate: 110, matchedPattern: 'Internal SMB file share', lastSeen: 'Just now' }
       ]
     },
     alerts: [],
     timeline: [
-      { time: '-15m', timestamp: '10:45', packetRate: 410, threatScore: 7, state: 'NORMAL' },
-      { time: '-10m', timestamp: '10:50', packetRate: 430, threatScore: 9, state: 'NORMAL' },
-      { time: '-5m', timestamp: '10:55', packetRate: 415, threatScore: 8, state: 'NORMAL' },
-      { time: 'Now', timestamp: '11:00', packetRate: 420, threatScore: 8, state: 'NORMAL' },
-      { time: '+1m', timestamp: '11:01', packetRate: 425, threatScore: 9, state: 'NORMAL', isForecast: true },
-      { time: '+2m', timestamp: '11:02', packetRate: 420, threatScore: 8, state: 'NORMAL', isForecast: true },
-      { time: '+3m', timestamp: '11:03', packetRate: 415, threatScore: 9, state: 'NORMAL', isForecast: true },
+      { time: '-25m', timestamp: '10:35', packetRate: 395, threatScore: 6, state: 'NORMAL', confidence: 0.99 },
+      { time: '-20m', timestamp: '10:40', packetRate: 410, threatScore: 7, state: 'NORMAL', confidence: 0.98 },
+      { time: '-15m', timestamp: '10:45', packetRate: 405, threatScore: 7, state: 'NORMAL', confidence: 0.98 },
+      { time: '-10m', timestamp: '10:50', packetRate: 430, threatScore: 9, state: 'NORMAL', confidence: 0.97 },
+      { time: '-5m', timestamp: '10:55', packetRate: 415, threatScore: 8, state: 'NORMAL', confidence: 0.98 },
+      { time: 'Now', timestamp: '11:00', packetRate: 420, threatScore: 8, state: 'NORMAL', confidence: 0.98 },
+      { time: '+1m', timestamp: '11:01', packetRate: 425, threatScore: 8, state: 'NORMAL', isForecast: true, confidence: 0.95 },
+      { time: '+2m', timestamp: '11:02', packetRate: 418, threatScore: 9, state: 'NORMAL', isForecast: true, confidence: 0.92 },
+      { time: '+3m', timestamp: '11:03', packetRate: 412, threatScore: 8, state: 'NORMAL', isForecast: true, confidence: 0.89 },
+      { time: '+4m', timestamp: '11:04', packetRate: 420, threatScore: 8, state: 'NORMAL', isForecast: true, confidence: 0.86 },
+      { time: '+5m', timestamp: '11:05', packetRate: 415, threatScore: 9, state: 'NORMAL', isForecast: true, confidence: 0.84 },
     ]
   },
 
   ELEVATED: {
     id: 'ELEVATED',
-    name: 'Elevated (Reconnaissance & Scan)',
-    description: 'Adversary executing multi-host port sweeping and service enumeration.',
+    name: '2. Elevated (Reconnaissance & Scan)',
+    description: 'Adversary executing multi-host port sweeping and service enumeration across internal subnets.',
     decision: {
       timestamp: new Date().toISOString(),
       current_state: 'ELEVATED',
@@ -96,6 +106,12 @@ export const MOCK_SCENARIOS: Record<string, DemoScenario> = {
         { step: 1, time: '+1 min', horizon_seconds: 60, state: 'ELEVATED', stage: 'Scanning', threat_score: 45, confidence: 0.88, risk_level: 'MEDIUM' },
         { step: 2, time: '+2 min', horizon_seconds: 120, state: 'SUSPICIOUS', stage: 'Initial Access', threat_score: 58, confidence: 0.84, risk_level: 'MEDIUM' },
         { step: 3, time: '+3 min', horizon_seconds: 180, state: 'SUSPICIOUS', stage: 'Initial Access', threat_score: 64, confidence: 0.79, risk_level: 'HIGH' }
+      ],
+      threat_threads: [
+        { id: 'TH-101', sourceIp: '10.0.0.84', destIp: '192.168.1.0/24', destPort: 445, protocol: 'TCP', threatStatus: 'SUSPICIOUS', flowRate: 380, matchedPattern: 'Horizontal SMB sweep (T1046)', lastSeen: 'Just now' },
+        { id: 'TH-102', sourceIp: '10.0.0.84', destIp: '192.168.1.0/24', destPort: 3389, protocol: 'TCP', threatStatus: 'SUSPICIOUS', flowRate: 290, matchedPattern: 'RDP port discovery probe', lastSeen: '1s ago' },
+        { id: 'TH-103', sourceIp: '10.0.0.84', destIp: '192.168.1.102', destPort: 22, protocol: 'TCP', threatStatus: 'SUSPICIOUS', flowRate: 150, matchedPattern: 'SSH banner grab attempt', lastSeen: '2s ago' },
+        { id: 'TH-104', sourceIp: '192.168.1.120', destIp: '142.250.190.46', destPort: 443, protocol: 'TCP', threatStatus: 'BENIGN', flowRate: 185, matchedPattern: 'Background web traffic', lastSeen: 'Just now' }
       ]
     },
     alerts: [
@@ -104,25 +120,29 @@ export const MOCK_SCENARIOS: Record<string, DemoScenario> = {
         timestamp: '11:00:15',
         severity: 'MEDIUM',
         title: 'Network Service Discovery Anomaly',
-        description: 'Host 192.168.1.104 emitting high frequency SYN sweeps across port range 20-1024.',
+        description: 'Host 10.0.0.84 emitting high-frequency SYN sweeps across port range 20-1024.',
         stage: 'Scanning (T1046)',
-        recommended_action: 'Apply rate limiting on source IP 192.168.1.104 and monitor boundary firewalls.'
+        recommended_action: 'Apply rate limiting on source IP 10.0.0.84 and monitor boundary firewalls.'
       }
     ],
     timeline: [
-      { time: '-15m', timestamp: '10:45', packetRate: 420, threatScore: 10, state: 'NORMAL' },
-      { time: '-10m', timestamp: '10:50', packetRate: 580, threatScore: 18, state: 'NORMAL' },
-      { time: '-5m', timestamp: '10:55', packetRate: 980, threatScore: 32, state: 'ELEVATED' },
-      { time: 'Now', timestamp: '11:00', packetRate: 1150, threatScore: 38, state: 'ELEVATED' },
-      { time: '+1m', timestamp: '11:01', packetRate: 1320, threatScore: 45, state: 'ELEVATED', isForecast: true },
-      { time: '+2m', timestamp: '11:02', packetRate: 1580, threatScore: 58, state: 'SUSPICIOUS', isForecast: true },
-      { time: '+3m', timestamp: '11:03', packetRate: 1800, threatScore: 64, state: 'SUSPICIOUS', isForecast: true },
+      { time: '-25m', timestamp: '10:35', packetRate: 410, threatScore: 8, state: 'NORMAL', confidence: 0.98 },
+      { time: '-20m', timestamp: '10:40', packetRate: 420, threatScore: 10, state: 'NORMAL', confidence: 0.97 },
+      { time: '-15m', timestamp: '10:45', packetRate: 510, threatScore: 15, state: 'NORMAL', confidence: 0.95 },
+      { time: '-10m', timestamp: '10:50', packetRate: 720, threatScore: 24, state: 'NORMAL', confidence: 0.93 },
+      { time: '-5m', timestamp: '10:55', packetRate: 980, threatScore: 32, state: 'ELEVATED', confidence: 0.91 },
+      { time: 'Now', timestamp: '11:00', packetRate: 1150, threatScore: 38, state: 'ELEVATED', confidence: 0.91 },
+      { time: '+1m', timestamp: '11:01', packetRate: 1320, threatScore: 45, state: 'ELEVATED', isForecast: true, confidence: 0.88 },
+      { time: '+2m', timestamp: '11:02', packetRate: 1580, threatScore: 58, state: 'SUSPICIOUS', isForecast: true, confidence: 0.84 },
+      { time: '+3m', timestamp: '11:03', packetRate: 1800, threatScore: 64, state: 'SUSPICIOUS', isForecast: true, confidence: 0.79 },
+      { time: '+4m', timestamp: '11:04', packetRate: 2050, threatScore: 68, state: 'SUSPICIOUS', isForecast: true, confidence: 0.76 },
+      { time: '+5m', timestamp: '11:05', packetRate: 2300, threatScore: 72, state: 'SUSPICIOUS', isForecast: true, confidence: 0.73 },
     ]
   },
 
   SUSPICIOUS: {
     id: 'SUSPICIOUS',
-    name: 'Suspicious (C2 Beaconing & Lateral Move)',
+    name: '3. Suspicious (C2 Beaconing & Lateral Move)',
     description: 'Persistence established; regular outbound heartbeat traffic to unclassified external IP.',
     decision: {
       timestamp: new Date().toISOString(),
@@ -156,6 +176,12 @@ export const MOCK_SCENARIOS: Record<string, DemoScenario> = {
         { step: 1, time: '+1 min', horizon_seconds: 60, state: 'SUSPICIOUS', stage: 'Command and Control', threat_score: 72, confidence: 0.87, risk_level: 'HIGH' },
         { step: 2, time: '+2 min', horizon_seconds: 120, state: 'PREDICTED ATTACK', stage: 'Lateral Movement', threat_score: 79, confidence: 0.86, risk_level: 'HIGH' },
         { step: 3, time: '+3 min', horizon_seconds: 180, state: 'ATTACK', stage: 'Impact', threat_score: 88, confidence: 0.81, risk_level: 'CRITICAL' }
+      ],
+      threat_threads: [
+        { id: 'TH-201', sourceIp: '192.168.1.72', destIp: '198.51.100.42', destPort: 8443, protocol: 'TCP', threatStatus: 'ATTACK', flowRate: 520, matchedPattern: 'Periodic C2 Beacon (interval=45s, jitter=0.03)', lastSeen: 'Just now' },
+        { id: 'TH-202', sourceIp: '192.168.1.72', destIp: '192.168.1.10', destPort: 88, protocol: 'TCP', threatStatus: 'SUSPICIOUS', flowRate: 410, matchedPattern: 'Kerberoasting ticket requests (T1558)', lastSeen: '3s ago' },
+        { id: 'TH-203', sourceIp: '192.168.1.72', destIp: '192.168.1.250', destPort: 445, protocol: 'TCP', threatStatus: 'ANOMALOUS', flowRate: 640, matchedPattern: 'High-volume internal SMB staging', lastSeen: 'Just now' },
+        { id: 'TH-204', sourceIp: '192.168.1.105', destIp: '1.1.1.1', destPort: 53, protocol: 'UDP', threatStatus: 'BENIGN', flowRate: 40, matchedPattern: 'Standard DNS resolver query', lastSeen: '5s ago' }
       ]
     },
     alerts: [
@@ -166,32 +192,36 @@ export const MOCK_SCENARIOS: Record<string, DemoScenario> = {
         title: 'C2 Beaconing Channel Identified',
         description: 'Repeated fixed-interval payloads outbound to external untrusted node 198.51.100.42.',
         stage: 'Command & Control (T1071)',
-        recommended_action: 'Isolate internal host 10.0.4.15 and drop egress traffic to 198.51.100.42.'
+        recommended_action: 'Isolate internal host 192.168.1.72 and drop egress traffic to 198.51.100.42.'
       },
       {
         id: 'alt-sus-2',
         timestamp: '10:58:45',
         severity: 'MEDIUM',
         title: 'Lateral Movement Kerberos Ticket Request',
-        description: 'Anomalous ticket granting requests targeting domain controller.',
+        description: 'Anomalous ticket granting requests targeting domain controller 192.168.1.10.',
         stage: 'Lateral Movement (T1021)',
         recommended_action: 'Enforce credential invalidation for compromised service account.'
       }
     ],
     timeline: [
-      { time: '-15m', timestamp: '10:45', packetRate: 480, threatScore: 18, state: 'NORMAL' },
-      { time: '-10m', timestamp: '10:50', packetRate: 1100, threatScore: 39, state: 'ELEVATED' },
-      { time: '-5m', timestamp: '10:55', packetRate: 1650, threatScore: 56, state: 'SUSPICIOUS' },
-      { time: 'Now', timestamp: '11:00', packetRate: 1980, threatScore: 66, state: 'SUSPICIOUS' },
-      { time: '+1m', timestamp: '11:01', packetRate: 2300, threatScore: 72, state: 'SUSPICIOUS', isForecast: true },
-      { time: '+2m', timestamp: '11:02', packetRate: 2850, threatScore: 79, state: 'PREDICTED ATTACK', isForecast: true },
-      { time: '+3m', timestamp: '11:03', packetRate: 3500, threatScore: 88, state: 'ATTACK', isForecast: true },
+      { time: '-25m', timestamp: '10:35', packetRate: 430, threatScore: 10, state: 'NORMAL', confidence: 0.98 },
+      { time: '-20m', timestamp: '10:40', packetRate: 480, threatScore: 18, state: 'NORMAL', confidence: 0.96 },
+      { time: '-15m', timestamp: '10:45', packetRate: 850, threatScore: 28, state: 'ELEVATED', confidence: 0.92 },
+      { time: '-10m', timestamp: '10:50', packetRate: 1100, threatScore: 39, state: 'ELEVATED', confidence: 0.90 },
+      { time: '-5m', timestamp: '10:55', packetRate: 1650, threatScore: 56, state: 'SUSPICIOUS', confidence: 0.89 },
+      { time: 'Now', timestamp: '11:00', packetRate: 1980, threatScore: 66, state: 'SUSPICIOUS', confidence: 0.89 },
+      { time: '+1m', timestamp: '11:01', packetRate: 2300, threatScore: 72, state: 'SUSPICIOUS', isForecast: true, confidence: 0.87 },
+      { time: '+2m', timestamp: '11:02', packetRate: 2850, threatScore: 79, state: 'PREDICTED ATTACK', isForecast: true, confidence: 0.86 },
+      { time: '+3m', timestamp: '11:03', packetRate: 3500, threatScore: 88, state: 'ATTACK', isForecast: true, confidence: 0.81 },
+      { time: '+4m', timestamp: '11:04', packetRate: 4200, threatScore: 92, state: 'ATTACK', isForecast: true, confidence: 0.78 },
+      { time: '+5m', timestamp: '11:05', packetRate: 5100, threatScore: 95, state: 'ATTACK', isForecast: true, confidence: 0.74 },
     ]
   },
 
   'PREDICTED ATTACK': {
     id: 'PREDICTED ATTACK',
-    name: 'Predicted Attack (Imminent Threat Horizon)',
+    name: '4. Predicted Attack (Imminent Threat Horizon)',
     description: 'Temporal World Model forecasts high-certainty transition to active attack state.',
     decision: {
       timestamp: new Date().toISOString(),
@@ -226,6 +256,12 @@ export const MOCK_SCENARIOS: Record<string, DemoScenario> = {
         { step: 1, time: '+1 min', horizon_seconds: 60, state: 'PREDICTED ATTACK', stage: 'Exfiltration', threat_score: 86, confidence: 0.91, risk_level: 'HIGH' },
         { step: 2, time: '+2 min', horizon_seconds: 120, state: 'ATTACK', stage: 'Impact', threat_score: 94, confidence: 0.93, risk_level: 'CRITICAL' },
         { step: 3, time: '+3 min', horizon_seconds: 180, state: 'ATTACK', stage: 'Impact', threat_score: 98, confidence: 0.95, risk_level: 'CRITICAL' }
+      ],
+      threat_threads: [
+        { id: 'TH-301', sourceIp: '45.154.255.89', destIp: '192.168.1.50', destPort: 443, protocol: 'TCP', threatStatus: 'ATTACK', flowRate: 1420, matchedPattern: 'SYN flood buffer saturation precursor', lastSeen: 'Just now' },
+        { id: 'TH-302', sourceIp: '192.168.1.72', destIp: '198.51.100.42', destPort: 8443, protocol: 'TCP', threatStatus: 'ATTACK', flowRate: 980, matchedPattern: 'High-throughput encrypted egress stream (T1048)', lastSeen: 'Just now' },
+        { id: 'TH-303', sourceIp: '185.220.101.5', destIp: '192.168.1.50', destPort: 80, protocol: 'TCP', threatStatus: 'ANOMALOUS', flowRate: 650, matchedPattern: 'Distributed botnet handshake staging', lastSeen: 'Just now' },
+        { id: 'TH-304', sourceIp: '192.168.1.45', destIp: '192.168.1.10', destPort: 445, protocol: 'TCP', threatStatus: 'BENIGN', flowRate: 90, matchedPattern: 'Internal SMB baseline stream', lastSeen: '6s ago' }
       ]
     },
     alerts: [
@@ -243,25 +279,29 @@ export const MOCK_SCENARIOS: Record<string, DemoScenario> = {
         timestamp: '10:59:10',
         severity: 'HIGH',
         title: 'Rapid Data Exfiltration Staging',
-        description: 'Large file transfer initiated over port 8443 to external destination.',
+        description: 'Large file transfer initiated over port 8443 to external destination 198.51.100.42.',
         stage: 'Exfiltration (T1048)',
         recommended_action: 'Sever active connection socket #89412 immediately.'
       }
     ],
     timeline: [
-      { time: '-15m', timestamp: '10:45', packetRate: 600, threatScore: 22, state: 'NORMAL' },
-      { time: '-10m', timestamp: '10:50', packetRate: 1350, threatScore: 48, state: 'ELEVATED' },
-      { time: '-5m', timestamp: '10:55', packetRate: 2100, threatScore: 68, state: 'SUSPICIOUS' },
-      { time: 'Now', timestamp: '11:00', packetRate: 3400, threatScore: 82, state: 'PREDICTED ATTACK' },
-      { time: '+1m', timestamp: '11:01', packetRate: 4800, threatScore: 86, state: 'PREDICTED ATTACK', isForecast: true },
-      { time: '+2m', timestamp: '11:02', packetRate: 7200, threatScore: 94, state: 'ATTACK', isForecast: true },
-      { time: '+3m', timestamp: '11:03', packetRate: 9800, threatScore: 98, state: 'ATTACK', isForecast: true },
+      { time: '-25m', timestamp: '10:35', packetRate: 460, threatScore: 12, state: 'NORMAL', confidence: 0.98 },
+      { time: '-20m', timestamp: '10:40', packetRate: 600, threatScore: 22, state: 'NORMAL', confidence: 0.95 },
+      { time: '-15m', timestamp: '10:45', packetRate: 1100, threatScore: 38, state: 'ELEVATED', confidence: 0.92 },
+      { time: '-10m', timestamp: '10:50', packetRate: 1350, threatScore: 48, state: 'ELEVATED', confidence: 0.90 },
+      { time: '-5m', timestamp: '10:55', packetRate: 2100, threatScore: 68, state: 'SUSPICIOUS', confidence: 0.88 },
+      { time: 'Now', timestamp: '11:00', packetRate: 3400, threatScore: 82, state: 'PREDICTED ATTACK', confidence: 0.88 },
+      { time: '+1m', timestamp: '11:01', packetRate: 4800, threatScore: 86, state: 'PREDICTED ATTACK', isForecast: true, confidence: 0.91 },
+      { time: '+2m', timestamp: '11:02', packetRate: 7200, threatScore: 94, state: 'ATTACK', isForecast: true, confidence: 0.93 },
+      { time: '+3m', timestamp: '11:03', packetRate: 9800, threatScore: 98, state: 'ATTACK', isForecast: true, confidence: 0.95 },
+      { time: '+4m', timestamp: '11:04', packetRate: 10500, threatScore: 99, state: 'ATTACK', isForecast: true, confidence: 0.94 },
+      { time: '+5m', timestamp: '11:05', packetRate: 11200, threatScore: 99, state: 'ATTACK', isForecast: true, confidence: 0.92 },
     ]
   },
 
   ATTACK: {
     id: 'ATTACK',
-    name: 'Attack (Volumetric SYN Flood & Disruption)',
+    name: '5. Attack (Volumetric SYN Flood & Disruption)',
     description: 'Active, high-severity attack in progress impacting network throughput and availability.',
     decision: {
       timestamp: new Date().toISOString(),
@@ -296,6 +336,12 @@ export const MOCK_SCENARIOS: Record<string, DemoScenario> = {
         { step: 1, time: '+1 min', horizon_seconds: 60, state: 'ATTACK', stage: 'Impact', threat_score: 96, confidence: 0.95, risk_level: 'CRITICAL' },
         { step: 2, time: '+2 min', horizon_seconds: 120, state: 'ATTACK', stage: 'Impact', threat_score: 94, confidence: 0.91, risk_level: 'CRITICAL' },
         { step: 3, time: '+3 min', horizon_seconds: 180, state: 'RECOVERY', stage: 'Recovery', threat_score: 72, confidence: 0.78, risk_level: 'HIGH' }
+      ],
+      threat_threads: [
+        { id: 'TH-401', sourceIp: '185.190.140.21', destIp: '192.168.1.50', destPort: 80, protocol: 'TCP', threatStatus: 'ATTACK', flowRate: 3600, matchedPattern: 'High-rate TCP SYN flood reflection (T1499)', lastSeen: 'Just now' },
+        { id: 'TH-402', sourceIp: '91.240.118.5', destIp: '192.168.1.50', destPort: 80, protocol: 'TCP', threatStatus: 'ATTACK', flowRate: 2950, matchedPattern: 'Spoofed TCP SYN backlog exhaust', lastSeen: 'Just now' },
+        { id: 'TH-403', sourceIp: '194.26.29.112', destIp: '192.168.1.50', destPort: 443, protocol: 'TCP', threatStatus: 'ATTACK', flowRate: 1900, matchedPattern: 'SSL/TLS Renegotiation DoS flood', lastSeen: 'Just now' },
+        { id: 'TH-404', sourceIp: '192.168.1.105', destIp: '1.1.1.1', destPort: 53, protocol: 'UDP', threatStatus: 'BENIGN', flowRate: 35, matchedPattern: 'DNS lookup (degraded latency)', lastSeen: 'Just now' }
       ]
     },
     alerts: [
@@ -319,19 +365,23 @@ export const MOCK_SCENARIOS: Record<string, DemoScenario> = {
       }
     ],
     timeline: [
-      { time: '-15m', timestamp: '10:45', packetRate: 800, threatScore: 30, state: 'NORMAL' },
-      { time: '-10m', timestamp: '10:50', packetRate: 1900, threatScore: 55, state: 'SUSPICIOUS' },
-      { time: '-5m', timestamp: '10:55', packetRate: 4600, threatScore: 84, state: 'PREDICTED ATTACK' },
-      { time: 'Now', timestamp: '11:00', packetRate: 8450, threatScore: 96, state: 'ATTACK' },
-      { time: '+1m', timestamp: '11:01', packetRate: 8600, threatScore: 96, state: 'ATTACK', isForecast: true },
-      { time: '+2m', timestamp: '11:02', packetRate: 7900, threatScore: 94, state: 'ATTACK', isForecast: true },
-      { time: '+3m', timestamp: '11:03', packetRate: 5200, threatScore: 72, state: 'RECOVERY', isForecast: true },
+      { time: '-25m', timestamp: '10:35', packetRate: 520, threatScore: 14, state: 'NORMAL', confidence: 0.98 },
+      { time: '-20m', timestamp: '10:40', packetRate: 800, threatScore: 30, state: 'NORMAL', confidence: 0.94 },
+      { time: '-15m', timestamp: '10:45', packetRate: 1400, threatScore: 45, state: 'ELEVATED', confidence: 0.91 },
+      { time: '-10m', timestamp: '10:50', packetRate: 1900, threatScore: 55, state: 'SUSPICIOUS', confidence: 0.89 },
+      { time: '-5m', timestamp: '10:55', packetRate: 4600, threatScore: 84, state: 'PREDICTED ATTACK', confidence: 0.88 },
+      { time: 'Now', timestamp: '11:00', packetRate: 8450, threatScore: 96, state: 'ATTACK', confidence: 0.97 },
+      { time: '+1m', timestamp: '11:01', packetRate: 8600, threatScore: 96, state: 'ATTACK', isForecast: true, confidence: 0.95 },
+      { time: '+2m', timestamp: '11:02', packetRate: 7900, threatScore: 94, state: 'ATTACK', isForecast: true, confidence: 0.91 },
+      { time: '+3m', timestamp: '11:03', packetRate: 5200, threatScore: 72, state: 'RECOVERY', isForecast: true, confidence: 0.78 },
+      { time: '+4m', timestamp: '11:04', packetRate: 3100, threatScore: 48, state: 'RECOVERY', isForecast: true, confidence: 0.82 },
+      { time: '+5m', timestamp: '11:05', packetRate: 1400, threatScore: 28, state: 'RECOVERY', isForecast: true, confidence: 0.88 },
     ]
   },
 
   RECOVERY: {
     id: 'RECOVERY',
-    name: 'Recovery (Incident Dampening & Normalization)',
+    name: '6. Recovery (Incident Dampening & Normalization)',
     description: 'Defensive mitigations deployed; network state stabilizing back toward baseline.',
     decision: {
       timestamp: new Date().toISOString(),
@@ -366,6 +416,12 @@ export const MOCK_SCENARIOS: Record<string, DemoScenario> = {
         { step: 1, time: '+1 min', horizon_seconds: 60, state: 'RECOVERY', stage: 'Recovery', threat_score: 18, confidence: 0.93, risk_level: 'LOW' },
         { step: 2, time: '+2 min', horizon_seconds: 120, state: 'NORMAL', stage: 'Baseline', threat_score: 12, confidence: 0.94, risk_level: 'LOW' },
         { step: 3, time: '+3 min', horizon_seconds: 180, state: 'NORMAL', stage: 'Baseline', threat_score: 9, confidence: 0.96, risk_level: 'LOW' }
+      ],
+      threat_threads: [
+        { id: 'TH-501', sourceIp: '192.168.1.50', destIp: 'Edge Scrubbing Filter', destPort: 80, protocol: 'TCP', threatStatus: 'BENIGN', flowRate: 280, matchedPattern: 'Scrubbed ingress flow, rate normalized', lastSeen: 'Just now' },
+        { id: 'TH-502', sourceIp: '192.168.1.120', destIp: '142.250.190.46', destPort: 443, protocol: 'TCP', threatStatus: 'BENIGN', flowRate: 150, matchedPattern: 'Standard TLS web connection', lastSeen: 'Just now' },
+        { id: 'TH-503', sourceIp: '185.190.140.21', destIp: '192.168.1.50', destPort: 80, protocol: 'TCP', threatStatus: 'BENIGN', flowRate: 0, matchedPattern: 'Blocked by perimeter ACL drop rule', lastSeen: '8s ago' },
+        { id: 'TH-504', sourceIp: '192.168.1.1', destIp: '129.6.15.28', destPort: 123, protocol: 'UDP', threatStatus: 'BENIGN', flowRate: 8, matchedPattern: 'NTP resync verified', lastSeen: 'Just now' }
       ]
     },
     alerts: [
@@ -374,19 +430,23 @@ export const MOCK_SCENARIOS: Record<string, DemoScenario> = {
         timestamp: '11:00:35',
         severity: 'LOW',
         title: 'Network Stability Restored',
-        description: 'Post-incident traffic telemetry confirmed nominal for 3 consecutive windows.',
+        description: 'Post-incident traffic telemetry confirmed nominal for consecutive windows.',
         stage: 'Recovery',
         recommended_action: 'Archive incident telemetry PCAP for forensic retrospective.'
       }
     ],
     timeline: [
-      { time: '-15m', timestamp: '10:45', packetRate: 7800, threatScore: 92, state: 'ATTACK' },
-      { time: '-10m', timestamp: '10:50', packetRate: 4200, threatScore: 68, state: 'ATTACK' },
-      { time: '-5m', timestamp: '10:55', packetRate: 1100, threatScore: 42, state: 'RECOVERY' },
-      { time: 'Now', timestamp: '11:00', packetRate: 510, threatScore: 24, state: 'RECOVERY' },
-      { time: '+1m', timestamp: '11:01', packetRate: 460, threatScore: 18, state: 'RECOVERY', isForecast: true },
-      { time: '+2m', timestamp: '11:02', packetRate: 430, threatScore: 12, state: 'NORMAL', isForecast: true },
-      { time: '+3m', timestamp: '11:03', packetRate: 418, threatScore: 9, state: 'NORMAL', isForecast: true },
+      { time: '-25m', timestamp: '10:35', packetRate: 8400, threatScore: 96, state: 'ATTACK', confidence: 0.97 },
+      { time: '-20m', timestamp: '10:40', packetRate: 7800, threatScore: 92, state: 'ATTACK', confidence: 0.95 },
+      { time: '-15m', timestamp: '10:45', packetRate: 4200, threatScore: 68, state: 'ATTACK', confidence: 0.88 },
+      { time: '-10m', timestamp: '10:50', packetRate: 2100, threatScore: 52, state: 'RECOVERY', confidence: 0.90 },
+      { time: '-5m', timestamp: '10:55', packetRate: 1100, threatScore: 42, state: 'RECOVERY', confidence: 0.92 },
+      { time: 'Now', timestamp: '11:00', packetRate: 510, threatScore: 24, state: 'RECOVERY', confidence: 0.94 },
+      { time: '+1m', timestamp: '11:01', packetRate: 460, threatScore: 18, state: 'RECOVERY', isForecast: true, confidence: 0.93 },
+      { time: '+2m', timestamp: '11:02', packetRate: 430, threatScore: 12, state: 'NORMAL', isForecast: true, confidence: 0.94 },
+      { time: '+3m', timestamp: '11:03', packetRate: 418, threatScore: 9, state: 'NORMAL', isForecast: true, confidence: 0.96 },
+      { time: '+4m', timestamp: '11:04', packetRate: 415, threatScore: 8, state: 'NORMAL', isForecast: true, confidence: 0.97 },
+      { time: '+5m', timestamp: '11:05', packetRate: 410, threatScore: 8, state: 'NORMAL', isForecast: true, confidence: 0.98 },
     ]
   },
 
@@ -418,7 +478,8 @@ export const MOCK_SCENARIOS: Record<string, DemoScenario> = {
         dst_ip_diversity: 0,
         active_connections: 0
       },
-      forecast: []
+      forecast: [],
+      threat_threads: []
     },
     alerts: [],
     timeline: []
@@ -431,13 +492,13 @@ export const MOCK_SCENARIOS: Record<string, DemoScenario> = {
     decision: {
       timestamp: new Date().toISOString(),
       current_state: 'SUSPICIOUS',
-      // current_stage missing
-      threat_type: '', // empty threat type
-      threat_score: undefined as unknown as number, // missing threat score
-      confidence: undefined as unknown as number, // missing confidence
+      threat_type: '',
+      threat_score: undefined as unknown as number,
+      confidence: undefined as unknown as number,
       predicted_next_state: 'PREDICTED ATTACK',
       prediction_confidence: undefined as unknown as number,
-      evidence: undefined as unknown as string[], // missing evidence array
+      evidence: undefined as unknown as string[],
+      threat_threads: undefined
     },
     alerts: [],
     timeline: []

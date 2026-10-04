@@ -61,6 +61,18 @@ export interface NetworkFeatures {
   };
 }
 
+export interface ThreatThread {
+  id: string;
+  sourceIp: string;
+  destIp: string;
+  destPort: number;
+  protocol: 'TCP' | 'UDP' | 'ICMP';
+  threatStatus: 'BENIGN' | 'SUSPICIOUS' | 'ATTACK' | 'ANOMALOUS';
+  flowRate: number; // pkts/s
+  matchedPattern: string;
+  lastSeen: string;
+}
+
 export interface SecurityDecision {
   timestamp: string;
   current_state: WorldModelState | string;
@@ -75,6 +87,7 @@ export interface SecurityDecision {
   evidence: string[];
   forecast?: ForecastStep[];
   features?: NetworkFeatures;
+  threat_threads?: ThreatThread[];
 }
 
 export interface SecurityAlert {
@@ -94,6 +107,7 @@ export interface TimelineObservation {
   threatScore: number;
   state: WorldModelState | string;
   isForecast?: boolean;
+  confidence?: number;
 }
 
 export interface SystemHealthStatus {
@@ -103,3 +117,4 @@ export interface SystemHealthStatus {
   dataSource: 'LIVE_MODEL' | 'VERIFIED_DEMO';
   lastUpdated: string;
 }
+
