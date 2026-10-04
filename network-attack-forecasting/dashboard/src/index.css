@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  }
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+/* Custom cyber glow and grid utilities */
+.cyber-grid {
+  background-size: 32px 32px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+}
+
+.glow-normal {
+  box-shadow: 0 0 20px -5px rgba(16, 185, 129, 0.35);
+}
+
+.glow-elevated {
+  box-shadow: 0 0 20px -5px rgba(245, 158, 11, 0.35);
+}
+
+.glow-suspicious {
+  box-shadow: 0 0 20px -5px rgba(249, 115, 22, 0.35);
+}
+
+.glow-predicted {
+  box-shadow: 0 0 25px -5px rgba(236, 72, 153, 0.45);
+}
+
+.glow-attack {
+  box-shadow: 0 0 25px -5px rgba(239, 68, 68, 0.5);
+}
+
+.glow-recovery {
+  box-shadow: 0 0 20px -5px rgba(139, 92, 246, 0.35);
+}
