@@ -10,6 +10,7 @@ interface ScenarioControlsProps {
   onApplyCustomJson?: (jsonString: string) => void;
   isPolling?: boolean;
   onTogglePolling?: () => void;
+  onOpenDatabaseModal?: (tab?: 'input' | 'config' | 'table') => void;
 }
 
 export const ScenarioControls: React.FC<ScenarioControlsProps> = ({
@@ -21,6 +22,7 @@ export const ScenarioControls: React.FC<ScenarioControlsProps> = ({
   onApplyCustomJson,
   isPolling,
   onTogglePolling,
+  onOpenDatabaseModal,
 }) => {
   const [showJsonModal, setShowJsonModal] = useState<boolean>(false);
   const [customJsonText, setCustomJsonText] = useState<string>(`{
@@ -113,6 +115,18 @@ export const ScenarioControls: React.FC<ScenarioControlsProps> = ({
             <Database className={`h-3.5 w-3.5 ${isLiveMode ? 'text-emerald-400' : 'text-slate-400'}`} />
             <span>{isLiveMode ? 'Target: Backend (/api)' : 'Target: Sample Input Mode'}</span>
           </button>
+
+          {/* Fill Database Input Button */}
+          {onOpenDatabaseModal && (
+            <button
+              onClick={() => onOpenDatabaseModal('input')}
+              className="px-2.5 py-1.5 rounded-xl text-xs font-medium bg-cyan-950/60 text-cyan-200 border border-cyan-500/60 hover:bg-cyan-900/80 hover:text-white flex items-center space-x-1.5 transition-all shadow-sm shadow-cyan-500/20 font-mono font-semibold"
+              title="Open form to fill and inject database records directly into the pipeline"
+            >
+              <Database className="h-3.5 w-3.5 text-cyan-400" />
+              <span>Fill Database Input</span>
+            </button>
+          )}
 
           {/* Custom JSON Sample Input */}
           <button

@@ -110,11 +110,44 @@ export interface TimelineObservation {
   confidence?: number;
 }
 
+export interface DatabaseConfig {
+  engine: 'sqlite' | 'postgresql' | 'timescaledb' | 'influxdb' | 'mysql' | 'rest_stream';
+  host: string;
+  port: number;
+  databaseName: string;
+  tableName: string;
+  username: string;
+  password?: string;
+  isConnected: boolean;
+  lastPingMs: number;
+  ssl: boolean;
+}
+
+export interface DatabaseFlowRecord {
+  id: string;
+  timestamp: string;
+  sourceIp: string;
+  sourcePort: number;
+  destIp: string;
+  destPort: number;
+  protocol: 'TCP' | 'UDP' | 'ICMP';
+  flowDuration: number; // ms
+  packetRate: number; // pkts/sec
+  byteRate: number; // bytes/sec
+  currentState: WorldModelState;
+  threatType: string;
+  threatScore: number;
+  confidence: number;
+  predictedNextState: WorldModelState;
+  predictionConfidence: number;
+  evidence: string;
+}
+
 export interface SystemHealthStatus {
   isBackendConnected: boolean;
   modelLoaded: boolean;
   inferenceLatencyMs: number;
-  dataSource: 'LIVE_MODEL' | 'VERIFIED_DEMO';
+  dataSource: 'LIVE_MODEL' | 'VERIFIED_DEMO' | 'DATABASE_INJECTED' | 'DATABASE_CONNECTED';
   lastUpdated: string;
 }
 

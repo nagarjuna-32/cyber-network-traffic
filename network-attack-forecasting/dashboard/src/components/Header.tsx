@@ -8,6 +8,9 @@ interface HeaderProps {
   onTogglePolling: () => void;
   onRefresh: () => void;
   isLoading: boolean;
+  onOpenDatabaseModal?: (tab?: 'input' | 'config' | 'table') => void;
+  dbEngine?: string;
+  dbRecordsCount?: number;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -15,9 +18,13 @@ export const Header: React.FC<HeaderProps> = ({
   isPolling,
   onTogglePolling,
   onRefresh,
-  isLoading
+  isLoading,
+  onOpenDatabaseModal,
+  dbEngine = 'sqlite',
+  dbRecordsCount = 0
 }) => {
   const isDemo = health.dataSource === 'VERIFIED_DEMO';
+  const isDbInjected = health.dataSource === 'DATABASE_INJECTED' || health.dataSource === 'DATABASE_CONNECTED';
 
   return (
     <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-40">
@@ -47,13 +54,15 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center space-x-3">
           {/* Data Source Badge */}
           <div className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center space-x-2 border transition-all ${
-            isDemo 
-              ? 'bg-amber-950/40 text-amber-300 border-amber-800/60' 
-              : 'bg-emerald-950/40 text-emerald-300 border-emerald-800/60 shadow-sm shadow-emerald-500/20'
+            isDbInjected
+              ? 'bg-cyan-950/60 text-cyan-300 border-cyan-500/80 shadow-sm shadow-cyan-500/30'
+              : isDemo 
+                ? 'bg-amber-950/40 text-amber-300 border-amber-800/60' 
+                : 'bg-emerald-950/40 text-emerald-300 border-emerald-800/60 shadow-sm shadow-emerald-500/20'
           }`}>
             <Database className="h-3.5 w-3.5" />
             <span>
-              {isDemo ? 'VERIFIED SAMPLE INPUT' : 'LIVE MODEL INFERENCE'}
+              {isDbInjected ? `DB FEED: ${dbEngine.toUpperCase()}` : isDemo ? 'VERIFIED SAMPLE INPUT' : 'LIVE MODEL INFERENCE'}
             </span>
           </div>
 
@@ -81,6 +90,22 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Right: Controls & Time */}
         <div className="flex items-center space-x-2.5">
+          {/* Database Hub Trigger Button */}
+          {onOpenDatabaseModal && (
+            <button
+              onClick={() => onOpenDatabaseModal('input')}
+              className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-950/90 to-blue-950/90 hover:from-cyan-900 hover:to-blue-900 border border-cyan-500/60 text-cyan-200 text-xs font-mono font-bold flex items-center space-x-2 shadow-sm shadow-cyan-500/20 transition-all active:scale-95 group"
+              title="Open Database Hub: fill database inputs, configure database connections, or inspect stored records"
+            >
+              <Database className="h-3.5 w-3.5 text-cyan-400 group-hover:scale-110 transition-transform" />
+              <span>DB HUB</span>
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-[10px] text-cyan-400/90 font-normal">
+                {dbRecordsCount > 0 ? `(${dbRecordsCount})` : ''}
+              </span>
+            </button>
+          )}
+
           <button
             onClick={onTogglePolling}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium border flex items-center space-x-1.5 transition-all ${

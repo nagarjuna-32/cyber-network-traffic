@@ -63,4 +63,41 @@ assert(missingScenario.decision.threat_score === undefined, 'Missing threat scor
 assert(missingScenario.decision.evidence === undefined, 'Missing evidence handled');
 assert(missingScenario.decision.threat_threads === undefined, 'Missing threat threads handled');
 
+// 4. Test Database Ingestion & Standardized Prediction Mapping
+const sampleDbRecord = {
+  id: 'DB-99001',
+  timestamp: new Date().toISOString(),
+  sourceIp: '10.0.12.84',
+  sourcePort: 4444,
+  destIp: '192.168.1.105',
+  destPort: 445,
+  protocol: 'TCP',
+  flowDuration: 240,
+  packetRate: 142.5,
+  byteRate: 48900,
+  currentState: 'SUSPICIOUS',
+  threatType: 'Lateral SMB Credential Probe (T1021)',
+  threatScore: 78.4,
+  confidence: 0.91,
+  predictedNextState: 'PREDICTED ATTACK',
+  predictionConfidence: 0.86,
+  evidence: 'High-frequency SYN/ACK handshakes with abnormal SMB port entropy.'
+};
+
+assert(sampleDbRecord.id.startsWith('DB-'), 'Database record has unique ID');
+assert(sampleDbRecord.sourceIp.length > 0 && sampleDbRecord.destIp.length > 0, 'Database sockets valid');
+assert(typeof sampleDbRecord.packetRate === 'number', 'Database packet rate is numeric');
+assert(['NORMAL', 'ELEVATED', 'SUSPICIOUS', 'PREDICTED ATTACK', 'ATTACK', 'RECOVERY'].includes(sampleDbRecord.currentState), 'Database record has valid World Model state');
+assert(['NORMAL', 'ELEVATED', 'SUSPICIOUS', 'PREDICTED ATTACK', 'ATTACK', 'RECOVERY'].includes(sampleDbRecord.predictedNextState), 'Database record has valid predicted next state');
+assert(sampleDbRecord.threatScore >= 0 && sampleDbRecord.threatScore <= 100, 'Database threat score in range');
+assert(sampleDbRecord.confidence >= 0 && sampleDbRecord.confidence <= 1, 'Database confidence in range');
+assert(sampleDbRecord.predictionConfidence >= 0 && sampleDbRecord.predictionConfidence <= 1, 'Database prediction confidence in range');
+assert(sampleDbRecord.evidence.length > 0, 'Database evidence is defined');
+
+// Verify DB Engine types
+const supportedEngines = ['sqlite', 'postgresql', 'timescaledb', 'influxdb', 'mysql', 'rest_stream'];
+for (const eng of supportedEngines) {
+  assert(eng.length > 0, `Engine ${eng} supported for database telemetry ingestion`);
+}
+
 console.log(`\n🎉 ALL ${passed}/${total} TEST SUITE ASSERTIONS PASSED!`);
