@@ -9,19 +9,21 @@ services:
       - "8000:8000"
     environment:
       - PYTHONUNBUFFERED=1
+      - ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://localhost:8000,http://localhost
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
       timeout: 5s
       retries: 3
+    restart: unless-stopped
 
-  dashboard:
-    image: node:20-alpine
-    working_dir: /app
-    volumes:
-      - ./network-attack-forecasting/dashboard:/app
+  frontend:
+    build:
+      context: ./network-attack-forecasting/dashboard
+      dockerfile: Dockerfile
     ports:
-      - "5173:5173"
-    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+      - "5173:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    restart: unless-stopped

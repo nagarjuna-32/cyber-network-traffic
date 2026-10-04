@@ -10,3 +10,7 @@ __pycache__/
 # Dashboard build artifacts
 dashboard/node_modules/
 dashboard/dist/
+
+# Protected model checkpoints & datasets
+!checkpoints/
+!data/

@@ -12,6 +12,7 @@ Provides real-time serving endpoints for:
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path
 import sys
 import time
@@ -76,10 +77,27 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# CORS configuration: configurable through ALLOWED_ORIGINS env var
+allowed_origins_raw = os.getenv("ALLOWED_ORIGINS", "")
+if allowed_origins_raw.strip():
+    allowed_origins = [o.strip() for o in allowed_origins_raw.split(",") if o.strip()]
+    allow_credentials = "*" not in allowed_origins
+else:
+    allowed_origins = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "http://localhost",
+    ]
+    allow_credentials = True
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=allowed_origins,
+    allow_credentials=allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -137,6 +155,7 @@ def get_health():
     is_model_loaded = pipeline.world_model is not None and pipeline.scaler is not None
     latency_ms = LATEST_RESULT.inference_latency_ms if LATEST_RESULT else 0.0
     return {
+        "status": "ok",
         "isBackendConnected": True,
         "modelLoaded": is_model_loaded,
         "inferenceLatencyMs": latency_ms,

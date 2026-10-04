@@ -383,9 +383,36 @@ Double-click **`run.bat`** or run in PowerShell / CMD:
 
 ### Method 3: Universal Docker Containerization (Any OS)
 
+Run the multi-container production system (FastAPI backend + Nginx frontend):
+
 ```bash
-docker compose up --build
+# 1. Build backend and frontend images
+docker compose build
+
+# 2. Launch all services
+docker compose up
 ```
+
+Services will be accessible at:
+- **CyberGuard AI Dashboard**: [http://localhost:5173](http://localhost:5173)
+- **FastAPI Backend & Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
+- **Health Verification**: [http://localhost:8000/health](http://localhost:8000/health)
+
+### Environment Configuration (`.env`)
+
+Copy `.env.example` to configure deployment settings:
+
+```bash
+cp .env.example .env
+```
+
+| Variable | Default | Purpose |
+| :--- | :--- | :--- |
+| `PORT` | `8000` | Port for the FastAPI server (auto-assigned by Render/cloud). |
+| `ALLOWED_ORIGINS` | `http://localhost:5173,...` | Comma-separated list of allowed CORS browser origins. |
+| `MODEL_PATH` | `checkpoints/world_model_gru.pt` | Path to PyTorch GRU checkpoint. |
+| `SCALER_PATH` | `checkpoints/world_model_scaler.pkl` | Path to fitted Log1p feature scaler. |
+| `VITE_API_URL` | *(empty = local `/api` proxy)* | Remote backend URL when deploying frontend on Vercel/Netlify. |
 
 ### Method 4: Manual Step-by-Step Execution
 

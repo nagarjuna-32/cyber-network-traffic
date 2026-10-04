@@ -24,12 +24,18 @@ wheels/
 *.egg
 .pytest_cache/
 
+# Environment files
+.env
+.env.*
+!.env.example
+
 # Node / Dashboard
 node_modules/
 dist/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+*.log
 
 # IDE & OS
 .vscode/
@@ -38,3 +44,7 @@ yarn-error.log*
 *.swo
 .DS_Store
 Thumbs.db
+
+# Protected model checkpoints & datasets (Must NEVER be ignored)
+!network-attack-forecasting/checkpoints/
+!network-attack-forecasting/data/
