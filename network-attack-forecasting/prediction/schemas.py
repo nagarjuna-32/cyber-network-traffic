@@ -2,10 +2,18 @@ import json
 from dataclasses import dataclass, field, asdict
 from typing import Dict, List, Optional
 
-VALID_STATES = {"NORMAL", "ELEVATED", "SUSPICIOUS", "ATTACK"}
-VALID_RISK_LEVELS = {"LOW", "MEDIUM", "HIGH", "CRITICAL"}
+VALID_STATES = {
+    "NORMAL",
+    "ELEVATED",
+    "SUSPICIOUS",
+    "ATTACK",
+    "MODEL_UNAVAILABLE",
+    "MODEL_LOAD_ERROR",
+    "INFERENCE_ERROR",
+}
+VALID_RISK_LEVELS = {"LOW", "MEDIUM", "HIGH", "CRITICAL", "UNKNOWN"}
 
-# The 7 human-readable attack progression stages exposed in the output.
+# The human-readable attack progression stages exposed in the output.
 # "Baseline" represents a clean / non-threat observation window.
 ATTACK_STAGES = [
     "Baseline",
@@ -16,6 +24,8 @@ ATTACK_STAGES = [
     "Lateral Movement",
     "Exfiltration",
     "Impact",
+    "Recovery",
+    "Unavailable",
 ]
 
 

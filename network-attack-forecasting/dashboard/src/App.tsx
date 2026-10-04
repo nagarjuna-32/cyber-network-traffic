@@ -72,7 +72,6 @@ export const App: React.FC = () => {
 
   // Handlers
   const handleSelectScenario = (key: string) => {
-    setIsLiveMode(false);
     setCurrentScenario(key);
   };
 

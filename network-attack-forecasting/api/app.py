@@ -135,11 +135,13 @@ def root():
 @app.get("/api/health", tags=["System"])
 def get_health():
     is_model_loaded = pipeline.world_model is not None and pipeline.scaler is not None
+    latency_ms = LATEST_RESULT.inference_latency_ms if LATEST_RESULT else 0.0
     return {
         "isBackendConnected": True,
         "modelLoaded": is_model_loaded,
-        "inferenceLatencyMs": 18,
-        "dataSource": "LIVE_MODEL" if is_model_loaded else "HEURISTIC_BACKEND",
+        "inferenceLatencyMs": latency_ms,
+        "pipelineLatencyMs": LATEST_RESULT.pipeline_latency_ms if LATEST_RESULT else 0.0,
+        "dataSource": "LIVE_MODEL" if is_model_loaded else "MODEL_UNAVAILABLE",
         "lastUpdated": time.strftime("%H:%M:%S", time.gmtime()),
     }
 
@@ -154,15 +156,19 @@ def get_current_prediction():
         generate_initial_state()
 
     if LATEST_RESULT is None:
-        raise HTTPException(status_code=500, detail="No active prediction state available.")
+        raise HTTPException(status_code=503, detail="MODEL_UNAVAILABLE: No active prediction state available.")
 
     res = LATEST_RESULT
     decision_payload = dict(res.decision)
+    decision_payload["decision"] = res.decision
     decision_payload["alerts"] = res.alerts
     decision_payload["timeline"] = res.timeline
     decision_payload["network_graph"] = res.network_graph
     decision_payload["mitre_mapping"] = res.mitre_mapping
     decision_payload["explainability"] = res.explainability
+    decision_payload["inferenceLatencyMs"] = res.inference_latency_ms
+    decision_payload["pipelineLatencyMs"] = res.pipeline_latency_ms
+    decision_payload["latency_ms"] = res.pipeline_latency_ms
 
     return decision_payload
 
@@ -177,16 +183,19 @@ def analyze_traffic(request: TrafficAnalyzeRequest):
     if not request.flows:
         raise HTTPException(status_code=400, detail="Flows list cannot be empty.")
 
-    t0 = time.time()
     records = [f.model_dump() for f in request.flows]
     df = pd.DataFrame(records)
 
     try:
         result = pipeline.run(df, scenario_name=request.source)
         LATEST_RESULT = result
-        latency_ms = round((time.time() - t0) * 1000, 2)
         resp = result.to_dict()
-        resp["latency_ms"] = latency_ms
+        for k, v in result.decision.items():
+            if k not in resp:
+                resp[k] = v
+        resp["latency_ms"] = result.pipeline_latency_ms
+        resp["inferenceLatencyMs"] = result.inference_latency_ms
+        resp["pipelineLatencyMs"] = result.pipeline_latency_ms
         return resp
     except Exception as e:
         logger.error(f"Error during traffic analysis: {e}", exc_info=True)
@@ -204,15 +213,18 @@ def simulate_and_forecast(request: SimulateScenarioRequest):
         valid = list(SCENARIO_GENERATORS.keys())
         raise HTTPException(status_code=400, detail=f"Invalid scenario '{scenario}'. Valid options: {valid}")
 
-    t0 = time.time()
     try:
         flows = generate_flows_for_scenario(scenario, rows=request.rows)
         df = pd.DataFrame(flows)
         result = pipeline.run(df, scenario_name=scenario)
         LATEST_RESULT = result
-        latency_ms = round((time.time() - t0) * 1000, 2)
         resp = result.to_dict()
-        resp["latency_ms"] = latency_ms
+        for k, v in result.decision.items():
+            if k not in resp:
+                resp[k] = v
+        resp["latency_ms"] = result.pipeline_latency_ms
+        resp["inferenceLatencyMs"] = result.inference_latency_ms
+        resp["pipelineLatencyMs"] = result.pipeline_latency_ms
         return resp
     except Exception as e:
         logger.error(f"Error during simulation execution: {e}", exc_info=True)

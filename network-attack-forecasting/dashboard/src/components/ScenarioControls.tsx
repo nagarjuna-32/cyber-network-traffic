@@ -73,7 +73,7 @@ export const ScenarioControls: React.FC<ScenarioControlsProps> = ({
       <div className="mt-3.5 flex flex-wrap items-center gap-2">
         <span className="text-[11px] font-mono text-slate-400 mr-1">States:</span>
         {scenarioKeys.map(({ key, label, color }) => {
-          const isActive = currentScenario === key && !isLiveMode;
+          const isActive = currentScenario === key;
           return (
             <button
               key={key}
@@ -93,7 +93,7 @@ export const ScenarioControls: React.FC<ScenarioControlsProps> = ({
 
         <span className="text-[11px] font-mono text-slate-400 mr-1">Resilience:</span>
         {edgeCases.map(({ key, label }) => {
-          const isActive = currentScenario === key && !isLiveMode;
+          const isActive = currentScenario === key;
           return (
             <button
               key={key}

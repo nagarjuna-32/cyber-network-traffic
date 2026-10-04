@@ -22,10 +22,77 @@ from .common import COLUMNS, make_flow
 from .normal import generate_normal
 from .ddos import generate_ddos
 from .beaconing import generate_beaconing
-from .mixed_escalation import generate_mixed
+from .mixed_escalation import MIXED_ANCHORS, generate_mixed
 from .scanning import generate_scanning
 from .syn_flood import generate_syn_flood
 from .udp_attack import generate_udp_attack
+from .common import (
+    anchor_key,
+    ephemeral_port,
+    internal_subnet_ip,
+    jitter,
+    protocol_for_port,
+    service_port,
+    split_rows,
+)
+
+
+def generate_recovery(
+    rng: np.random.Generator,
+    total_rows: int,
+    min_len: int = 10,
+    max_len: int = 30,
+) -> list[list[dict]]:
+    """Generates synthetic recovery traffic transitioning from ATTACK back down to NORMAL."""
+    sequences = []
+    for length in split_rows(total_rows, min_len, max_len, rng):
+        subnet = int(rng.integers(1, 40))
+        src_ip = internal_subnet_ip(rng, subnet)
+        dst_ip = f"192.168.{subnet}.{int(rng.integers(200, 254))}"
+        dst_port = service_port(rng)
+        protocol = protocol_for_port(rng, dst_port)
+
+        # Ramp downwards from 3.0 (ATTACK) to 0.0 (NORMAL)
+        ramp = np.linspace(3.0, 0.0, length)
+        ramp = np.clip(ramp + rng.normal(0.0, 0.05, length), 0.0, 3.0)
+
+        rows = []
+        for i in range(length):
+            e = float(ramp[i])
+            if e >= 2.2:
+                state = "ATTACK"
+            elif e >= 1.4:
+                state = "SUSPICIOUS"
+            elif e >= 0.7:
+                state = "ELEVATED"
+            else:
+                state = "NORMAL"
+
+            duration = float(np.clip(jitter(rng, anchor_key(MIXED_ANCHORS, e, "flow_duration"), 0.2), 0.05, 300.0))
+            packets = int(np.clip(jitter(rng, anchor_key(MIXED_ANCHORS, e, "packet_count"), 0.28), 3, 400000))
+            bpp = jitter(rng, anchor_key(MIXED_ANCHORS, e, "bytes_per_packet"), 0.1)
+            iat = max(float(np.clip(jitter(rng, anchor_key(MIXED_ANCHORS, e, "inter_arrival_time"), 0.3), 0.0005, 8.0)), 1e-4)
+            conn_freq = max(float(np.clip(jitter(rng, anchor_key(MIXED_ANCHORS, e, "connection_frequency"), 0.25), 0.01, 20000.0)), 1e-4)
+
+            rows.append(
+                make_flow(
+                    rng,
+                    scenario="recovery",
+                    state=state,
+                    src_ip=src_ip,
+                    dst_ip=dst_ip,
+                    src_port=ephemeral_port(rng),
+                    dst_port=dst_port,
+                    protocol=protocol,
+                    flow_duration=duration,
+                    packet_count=packets,
+                    byte_count=int(max(packets * bpp, packets * 64)),
+                    inter_arrival_time=iat,
+                    connection_frequency=conn_freq,
+                )
+            )
+        sequences.append(rows)
+    return sequences
 
 
 SCENARIO_GENERATORS = {
@@ -36,6 +103,7 @@ SCENARIO_GENERATORS = {
     "scanning": generate_scanning,
     "syn_flood": generate_syn_flood,
     "udp_attack": generate_udp_attack,
+    "recovery": generate_recovery,
 }
 
 

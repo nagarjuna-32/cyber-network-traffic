@@ -10,6 +10,9 @@ _STATE_TO_STAGES: Dict[str, List[str]] = {
     "ELEVATED":   ["Reconnaissance", "Scanning"],
     "SUSPICIOUS": ["Initial Access", "Command and Control"],
     "ATTACK":     ["Lateral Movement", "Exfiltration", "Impact"],
+    "MODEL_UNAVAILABLE": ["Unavailable"],
+    "MODEL_LOAD_ERROR":  ["Unavailable"],
+    "INFERENCE_ERROR":   ["Unavailable"],
 }
 
 # When estimating what comes NEXT, we escalate one rung on the ladder.
@@ -18,6 +21,9 @@ _NEXT_STATE_MAP: Dict[str, str] = {
     "ELEVATED":   "SUSPICIOUS",
     "SUSPICIOUS": "ATTACK",
     "ATTACK":     "ATTACK",   # already at max
+    "MODEL_UNAVAILABLE": "MODEL_UNAVAILABLE",
+    "MODEL_LOAD_ERROR":  "MODEL_LOAD_ERROR",
+    "INFERENCE_ERROR":   "INFERENCE_ERROR",
 }
 
 
@@ -27,8 +33,12 @@ def map_state_to_stage(state: str, history: List[str] = None) -> str:
 
     The mapping uses history to pick among multiple possible stages for the
     same internal state (e.g. a *second* ELEVATED window is more likely
-    "Scanning" than initial "Reconnaissance").
+    "Scanning" than initial "Reconnaissance"). Also identifies recovery
+    transition when network returns from ATTACK down towards baseline.
     """
+    if history and "ATTACK" in history[-3:] and state in ("SUSPICIOUS", "ELEVATED", "NORMAL"):
+        return "Recovery"
+
     stages = _STATE_TO_STAGES.get(state, ["Unknown"])
 
     if len(stages) == 1 or not history:
@@ -70,6 +80,9 @@ class StateMachine:
         if not probs:
             return "NORMAL", 1.0
 
+        if all(p == 0.0 for p in probs.values()):
+            return "MODEL_UNAVAILABLE", 0.0
+
         best_state = "NORMAL"
         best_prob = -1.0
         for s, p in probs.items():
@@ -92,7 +105,7 @@ class StateMachine:
         if len(self.history) > self.max_history:
             self.history.pop(0)
 
-        if observed_state in LADDER:
+        if observed_state in LADDER or observed_state in ("MODEL_UNAVAILABLE", "MODEL_LOAD_ERROR", "INFERENCE_ERROR"):
             self.current_state = observed_state
         else:
             self.current_state = "UNKNOWN"
@@ -112,7 +125,7 @@ class StateMachine:
         Resolves the predicted next internal state.
         Prefers the World Model's prediction; falls back to ladder escalation.
         """
-        if model_next in LADDER:
+        if model_next in LADDER or model_next in ("MODEL_UNAVAILABLE", "MODEL_LOAD_ERROR", "INFERENCE_ERROR"):
             return model_next
         return _NEXT_STATE_MAP.get(self.current_state, "NORMAL")
 

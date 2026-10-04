@@ -1,4 +1,4 @@
-import { SecurityDecision, SecurityAlert, TimelineObservation } from '../types/prediction';
+import type { SecurityDecision, SecurityAlert, TimelineObservation } from '../types/prediction.ts';
 
 export interface DemoScenario {
   id: string;

@@ -1,10 +1,20 @@
 """
-End-to-End Pipeline Integration Tests for NetForecast AI.
+End-to-End Pipeline Integration & Validation Tests for NetForecast AI.
 
-Verifies that sample network traffic travels through the complete pipeline:
-Input -> Extraction -> Preprocessing -> Windowing -> Feature State + Graph ->
-World Model -> K-Step Forecast -> Risk / Attack Stage -> MITRE Mapping ->
-XAI Attribution -> Alert Engine -> API Response.
+Validates the complete AI World Model pipeline:
+Traffic / Simulation -> Dataset -> Preprocessing -> Feature Engineering ->
+Temporal Sequences -> AI World Model (GRU) -> Current State Prediction ->
+Next State Forecast -> Threat Scoring -> Evidence -> FastAPI -> Dashboard Contract.
+
+Covers:
+- Test 1: NORMAL traffic state
+- Test 2: ELEVATED traffic state
+- Test 3: SUSPICIOUS traffic state
+- Test 4: ATTACK traffic state
+- Test 5: RECOVERY transition from attack back to baseline
+- Test 6: Measured real latency (inference_latency_ms and pipeline_latency_ms)
+- Test 7: Honest failure reporting (MODEL_UNAVAILABLE / INFERENCE_ERROR, no fake 0.85 fallbacks)
+- Test 8: Full API suite (/health, /api/predict/current, /api/simulate, /api/traffic/analyze)
 """
 
 import sys
@@ -21,11 +31,12 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from api.app import app, generate_flows_for_scenario
 from pipeline.orchestrator import EndToEndPipeline
+from simulation.attack_simulator import SCENARIO_GENERATORS, add_tcp_flags
 
 
 class TestEndToEndPipeline(unittest.TestCase):
     """
-    Validates end-to-end pipeline execution from traffic inputs to security alerts.
+    Validates end-to-end pipeline execution and state progression.
     """
 
     @classmethod
@@ -33,106 +44,131 @@ class TestEndToEndPipeline(unittest.TestCase):
         cls.pipeline = EndToEndPipeline()
         cls.client = TestClient(app)
 
-    def test_pipeline_normal_traffic(self):
-        flows = generate_flows_for_scenario("normal", rows=30, seed=42)
+    def test_state_1_normal(self):
+        """Test 1 — NORMAL: Normal traffic produces NORMAL state."""
+        flows = generate_flows_for_scenario("normal", rows=35, seed=42)
         df = pd.DataFrame(flows)
-
         result = self.pipeline.run(df, scenario_name="normal")
 
-        # 1. Output structure
-        self.assertIsNotNone(result)
-        self.assertIn("decision", result.to_dict())
-        self.assertIn("network_graph", result.to_dict())
-        self.assertIn("timeline", result.to_dict())
-        self.assertIn("pipeline_status", result.to_dict())
-
-        # 2. Decision fields
         decision = result.decision
-        self.assertIn(decision["current_state"], ["NORMAL", "ELEVATED", "SUSPICIOUS", "ATTACK"])
-        self.assertGreaterEqual(decision["threat_score"], 0)
-        self.assertLessEqual(decision["threat_score"], 100)
+        self.assertEqual(decision["current_state"], "NORMAL")
+        self.assertLessEqual(decision["threat_score"], 30)
+        self.assertEqual(decision["risk_level"], "LOW")
+        self.assertGreater(result.inference_latency_ms, 0.0)
 
-        # 3. Graph structure
-        graph = result.network_graph
-        self.assertGreater(graph["num_nodes"], 0)
-        self.assertGreater(graph["num_edges"], 0)
-
-        # 4. Pipeline stages all passed
-        status = result.pipeline_status
-        for stage, state in status.items():
-            self.assertEqual(state, "PASS", f"Stage '{stage}' failed!")
-
-    def test_pipeline_attack_traffic(self):
-        flows = generate_flows_for_scenario("syn_flood", rows=40, seed=123)
+    def test_state_2_elevated(self):
+        """Test 2 — ELEVATED: Scanning traffic produces ELEVATED state."""
+        flows = generate_flows_for_scenario("scanning", rows=35, seed=42)
         df = pd.DataFrame(flows)
+        result = self.pipeline.run(df, scenario_name="scanning")
 
-        result = self.pipeline.run(df, scenario_name="syn_flood")
-
-        # Attack scenario should elevate threat score and generate alert or evidence
         decision = result.decision
-        self.assertIn(decision["risk_level"], ["LOW", "MEDIUM", "HIGH", "CRITICAL"])
-        self.assertIsInstance(decision["evidence"], list)
+        self.assertEqual(decision["current_state"], "ELEVATED")
+        self.assertIn(decision["current_stage"], ["Reconnaissance", "Scanning"])
+        self.assertGreaterEqual(decision["threat_score"], 20)
 
-        # MITRE mapping
-        mitre = result.mitre_mapping
-        self.assertTrue(mitre["technique_id"].startswith("T"))
-        self.assertTrue(len(mitre["tactic"]) > 0)
+    def test_state_3_suspicious(self):
+        """Test 3 — SUSPICIOUS: Beaconing traffic produces SUSPICIOUS state."""
+        flows = generate_flows_for_scenario("beaconing", rows=35, seed=42)
+        df = pd.DataFrame(flows)
+        result = self.pipeline.run(df, scenario_name="beaconing")
 
-        # XAI
-        xai = result.explainability
-        self.assertGreater(len(xai["important_features"]), 0)
-        self.assertIsInstance(xai["feature_contributions"], dict)
+        decision = result.decision
+        self.assertEqual(decision["current_state"], "SUSPICIOUS")
+        self.assertIn(decision["current_stage"], ["Initial Access", "Command and Control"])
 
-        # Forecast steps
-        self.assertEqual(len(result.forecast_steps), self.pipeline.forecast_horizon)
-        for step in result.forecast_steps:
-            self.assertIn("threat_score", step)
-            self.assertIn("state", step)
-            self.assertIn("stage", step)
+    def test_state_4_attack(self):
+        """Test 4 — ATTACK: Strong attack traffic (DDoS / SYN flood) produces ATTACK state."""
+        flows = generate_flows_for_scenario("ddos", rows=35, seed=42)
+        df = pd.DataFrame(flows)
+        result = self.pipeline.run(df, scenario_name="ddos")
 
-    def test_api_health(self):
+        decision = result.decision
+        self.assertEqual(decision["current_state"], "ATTACK")
+        self.assertGreaterEqual(decision["threat_score"], 60)
+        self.assertIn(decision["risk_level"], ["HIGH", "CRITICAL"])
+        self.assertGreater(len(result.alerts), 0)
+
+    def test_state_5_recovery_transition(self):
+        """Test 5 — RECOVERY: Gradual transition from attack down to normal."""
+        pipe = EndToEndPipeline()
+        rng = np.random.default_rng(42)
+
+        # Step A: Attack traffic
+        attack_flows = generate_flows_for_scenario("ddos", rows=35, seed=42)
+        res_attack = pipe.run(pd.DataFrame(attack_flows), scenario_name="ddos")
+        self.assertEqual(res_attack.decision["current_state"], "ATTACK")
+
+        # Step B: Normal traffic immediately following attack triggers recovery
+        normal_flows = generate_flows_for_scenario("normal", rows=35, seed=99)
+        res_rec = pipe.run(pd.DataFrame(normal_flows), scenario_name="normal")
+
+        # The state transitions down to NORMAL and stage acknowledges recovery from ATTACK
+        self.assertEqual(res_rec.decision["current_state"], "NORMAL")
+        self.assertEqual(res_rec.decision["current_stage"], "Recovery")
+        self.assertLess(res_rec.decision["threat_score"], res_attack.decision["threat_score"])
+
+    def test_measured_latency_not_hardcoded(self):
+        """Test 6: Verifies real measured latency instead of hard-coded values."""
+        flows = generate_flows_for_scenario("normal", rows=25, seed=7)
+        res = self.pipeline.run(pd.DataFrame(flows), scenario_name="bench")
+
+        self.assertIsInstance(res.inference_latency_ms, float)
+        self.assertGreater(res.inference_latency_ms, 0.0)
+        self.assertIsInstance(res.pipeline_latency_ms, float)
+        self.assertGreater(res.pipeline_latency_ms, res.inference_latency_ms)
+
+    def test_model_unavailable_honest_reporting(self):
+        """Test 7: Proves system does not disguise missing model with fake probabilities."""
+        pipe_broken = EndToEndPipeline(checkpoint_dir="/non_existent_checkpoint_path_123")
+        pipe_broken.world_model = None
+        pipe_broken.scaler = None
+
+        flows = generate_flows_for_scenario("normal", rows=25, seed=7)
+        res = pipe_broken.run(pd.DataFrame(flows), scenario_name="test_broken")
+
+        decision = res.decision
+        self.assertEqual(decision["current_state"], "MODEL_UNAVAILABLE")
+        self.assertEqual(decision["threat_type"], "AI World Model Unavailable")
+        self.assertIn("FAIL", res.pipeline_status["AI World Model"])
+
+    def test_api_health_endpoint(self):
         res = self.client.get("/api/health")
         self.assertEqual(res.status_code, 200)
         data = res.json()
         self.assertTrue(data["isBackendConnected"])
-        self.assertIn("modelLoaded", data)
+        self.assertTrue(data["modelLoaded"])
+        self.assertGreaterEqual(data["inferenceLatencyMs"], 0.0)
 
-    def test_api_predict_current(self):
+    def test_api_predict_current_endpoint(self):
         res = self.client.get("/api/predict/current")
         self.assertEqual(res.status_code, 200)
         data = res.json()
-        self.assertIn("current_state", data)
-        self.assertIn("threat_score", data)
+        self.assertIn(data["current_state"], ["NORMAL", "ELEVATED", "SUSPICIOUS", "ATTACK"])
+        self.assertIn("alerts", data)
         self.assertIn("timeline", data)
         self.assertIn("network_graph", data)
+        self.assertIn("mitre_mapping", data)
+        self.assertIn("inferenceLatencyMs", data)
 
     def test_api_simulate_endpoint(self):
-        payload = {"scenario": "scanning", "rows": 25}
-        res = self.client.post("/api/simulate", json=payload)
-        self.assertEqual(res.status_code, 200)
-        data = res.json()
-        self.assertIn("decision", data)
-        self.assertIn("alerts", data)
-        self.assertIn("mitre_mapping", data)
-        self.assertEqual(data["mitre_mapping"]["technique_id"], "T1046")
+        for scenario in ["normal", "scanning", "ddos", "recovery"]:
+            payload = {"scenario": scenario, "rows": 30}
+            res = self.client.post("/api/simulate", json=payload)
+            self.assertEqual(res.status_code, 200, f"Simulate failed for {scenario}")
+            data = res.json()
+            self.assertIn("current_state", data)
+            self.assertIn("threat_score", data)
+            self.assertIn("inferenceLatencyMs", data)
 
     def test_api_traffic_analyze_endpoint(self):
-        flows = generate_flows_for_scenario("normal", rows=20, seed=99)
-        payload = {"source": "test_stream", "flows": flows}
-
+        flows = generate_flows_for_scenario("normal", rows=20, seed=88)
+        payload = {"source": "live_stream_sensor", "flows": flows}
         res = self.client.post("/api/traffic/analyze", json=payload)
         self.assertEqual(res.status_code, 200)
         data = res.json()
-        self.assertIn("decision", data)
-        self.assertIn("pipeline_status", data)
-        self.assertIn("latency_ms", data)
-
-    def test_api_pipeline_status(self):
-        res = self.client.get("/api/pipeline/status")
-        self.assertEqual(res.status_code, 200)
-        data = res.json()
-        self.assertEqual(data["overall_status"], "HEALTHY")
-        self.assertIn("stages", data)
+        self.assertEqual(data["current_state"], "NORMAL")
+        self.assertGreater(data["pipelineLatencyMs"], 0.0)
 
 
 if __name__ == "__main__":

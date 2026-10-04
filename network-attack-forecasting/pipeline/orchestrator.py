@@ -55,6 +55,8 @@ class PipelineRunResult:
     explainability: Dict[str, Any]
     forecast_steps: List[Dict[str, Any]]
     pipeline_status: Dict[str, str]
+    inference_latency_ms: float = 0.0
+    pipeline_latency_ms: float = 0.0
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -67,6 +69,8 @@ class PipelineRunResult:
             "explainability": self.explainability,
             "forecast_steps": self.forecast_steps,
             "pipeline_status": self.pipeline_status,
+            "inference_latency_ms": self.inference_latency_ms,
+            "pipeline_latency_ms": self.pipeline_latency_ms,
         }
 
 
@@ -112,7 +116,7 @@ class EndToEndPipeline:
         Executes the complete pipeline on raw or simulated network traffic flows.
         """
         status: Dict[str, str] = {}
-        t_start = time.time()
+        t_pipeline_start = time.perf_counter()
         iso_now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
         # Step 1: Ingestion
@@ -177,31 +181,35 @@ class EndToEndPipeline:
             status["Temporal Windowing"] = f"FAIL ({e})"
             seq_matrix = np.zeros((self.sequence_length, 7), dtype=np.float64)
 
-        # Step 6: World Model Inference
+        # Step 6: World Model Inference (Real AI Pipeline)
+        t_infer_start = time.perf_counter()
+        infer_latency_ms = 0.0
         try:
             if self.world_model is None or self.scaler is None:
                 self._load_model()
 
             if self.world_model is not None and self.scaler is not None:
                 inf_result = run_world_model_inference(self.world_model, self.scaler, seq_matrix)
+                infer_latency_ms = round((time.perf_counter() - t_infer_start) * 1000, 2)
                 current_state = inf_result["current_state"]
                 current_probs = inf_result["current_probabilities"]
                 pred_next_state = inf_result["predicted_next_state"]
                 pred_conf = inf_result["prediction_confidence"]
+                status["AI World Model"] = "PASS"
             else:
-                # Heuristic fallback if checkpoint missing
-                current_state = "NORMAL"
-                current_probs = {"NORMAL": 0.85, "ELEVATED": 0.10, "SUSPICIOUS": 0.04, "ATTACK": 0.01}
-                pred_next_state = "NORMAL"
-                pred_conf = 0.85
-
-            status["AI World Model"] = "PASS"
+                infer_latency_ms = 0.0
+                current_state = "MODEL_UNAVAILABLE"
+                current_probs = {"NORMAL": 0.0, "ELEVATED": 0.0, "SUSPICIOUS": 0.0, "ATTACK": 0.0}
+                pred_next_state = "MODEL_UNAVAILABLE"
+                pred_conf = 0.0
+                status["AI World Model"] = "FAIL (Model checkpoint unavailable)"
         except Exception as e:
+            infer_latency_ms = round((time.perf_counter() - t_infer_start) * 1000, 2)
             status["AI World Model"] = f"FAIL ({e})"
-            current_state = "NORMAL"
-            current_probs = {"NORMAL": 0.9, "ELEVATED": 0.05, "SUSPICIOUS": 0.03, "ATTACK": 0.02}
-            pred_next_state = "NORMAL"
-            pred_conf = 0.9
+            current_state = "INFERENCE_ERROR"
+            current_probs = {"NORMAL": 0.0, "ELEVATED": 0.0, "SUSPICIOUS": 0.0, "ATTACK": 0.0}
+            pred_next_state = "INFERENCE_ERROR"
+            pred_conf = 0.0
 
         # Step 7: Construct WorldModelOutput
         latest_features = {}
@@ -224,26 +232,43 @@ class EndToEndPipeline:
         )
 
         # Step 8: Risk Scoring, Attack Stage & Multi-step Forecasting
-        try:
-            decision = self.prediction_engine.process(wmo)
-            forecast_steps = self.prediction_engine.forecast(wmo, k_steps=self.forecast_horizon)
-            status["Risk & Stage Forecasting"] = "PASS"
-        except Exception as e:
-            status["Risk & Stage Forecasting"] = f"FAIL ({e})"
+        if current_state in ("MODEL_UNAVAILABLE", "INFERENCE_ERROR"):
+            status["Risk & Stage Forecasting"] = f"FAIL ({current_state})"
             decision = SecurityDecision(
                 timestamp=iso_now,
                 current_state=current_state,
-                current_stage="Baseline",
-                predicted_next_state=pred_next_state,
-                predicted_stage="Baseline",
-                threat_score=10,
-                risk_level="LOW",
-                confidence=0.9,
-                prediction_confidence=0.9,
-                threat_type="Normal Operations",
-                evidence=[],
+                current_stage="Unavailable",
+                predicted_next_state=current_state,
+                predicted_stage="Unavailable",
+                threat_score=0,
+                risk_level="UNKNOWN",
+                confidence=0.0,
+                prediction_confidence=0.0,
+                threat_type="AI World Model Unavailable",
+                evidence=[f"AI World Model error: {status.get('AI World Model', 'Model unavailable')}"],
             )
             forecast_steps = []
+        else:
+            try:
+                decision = self.prediction_engine.process(wmo)
+                forecast_steps = self.prediction_engine.forecast(wmo, k_steps=self.forecast_horizon)
+                status["Risk & Stage Forecasting"] = "PASS"
+            except Exception as e:
+                status["Risk & Stage Forecasting"] = f"FAIL ({e})"
+                decision = SecurityDecision(
+                    timestamp=iso_now,
+                    current_state=current_state,
+                    current_stage="Baseline",
+                    predicted_next_state=pred_next_state,
+                    predicted_stage="Baseline",
+                    threat_score=10,
+                    risk_level="LOW",
+                    confidence=pred_conf,
+                    prediction_confidence=pred_conf,
+                    threat_type="Normal Operations",
+                    evidence=[f"Scoring fallback error: {str(e)}"],
+                )
+                forecast_steps = []
 
         # Step 9: MITRE ATT&CK Mapping
         try:
@@ -309,10 +334,14 @@ class EndToEndPipeline:
                 "isForecast": True,
             })
 
+        pipeline_latency_ms = round((time.perf_counter() - t_pipeline_start) * 1000, 2)
         status["Security Dashboard & API Integration"] = "PASS"
 
         decision_dict = decision.to_dict()
         decision_dict["forecast"] = forecast_steps
+        decision_dict["inference_latency_ms"] = infer_latency_ms
+        decision_dict["pipeline_latency_ms"] = pipeline_latency_ms
+        decision_dict["forecast_method"] = "Controlled Horizon Projection (GRU Dual-Head + State Dynamics)"
 
         return PipelineRunResult(
             timestamp=iso_now,
@@ -324,4 +353,6 @@ class EndToEndPipeline:
             explainability=xai_result.to_dict(),
             forecast_steps=forecast_steps,
             pipeline_status=status,
+            inference_latency_ms=infer_latency_ms,
+            pipeline_latency_ms=pipeline_latency_ms,
         )
