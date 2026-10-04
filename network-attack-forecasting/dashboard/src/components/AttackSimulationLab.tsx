@@ -51,10 +51,10 @@ export const AttackSimulationLab: React.FC<AttackSimulationLabProps> = ({
           </div>
         </div>
 
-        {/* Mandatory Demo Label */}
+        {/* Operational Status Label */}
         <div className="flex items-center space-x-2">
-          <span className="text-[10px] font-mono px-2.5 py-1 rounded-md bg-amber-950/40 border border-amber-800/60 text-amber-300 font-bold uppercase tracking-wider">
-            CONTROLLED SIMULATION / DEMO
+          <span className="text-[10px] font-mono px-2.5 py-1 rounded-md bg-cyan-950/40 border border-cyan-800/60 text-cyan-300 font-bold uppercase tracking-wider">
+            CONTROLLED TESTBED / LIVE INFERENCE
           </span>
         </div>
       </div>

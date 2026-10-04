@@ -45,23 +45,18 @@ export const MitreIntelligenceView: React.FC<MitreIntelligenceViewProps> = ({
   const tacticId = mitreMapping?.tactic_id || 'TA0043';
   const techniqueName = mitreMapping?.technique || 'Active Scanning / Service Enumeration';
   const techniqueId = mitreMapping?.technique_id || 'T1595';
-  const confidence = mitreMapping?.confidence ?? decision?.confidence ?? 0.85;
+  const confidence = Number(mitreMapping?.confidence ?? decision?.confidence ?? 0);
 
   const evidenceList = mitreMapping?.evidence && mitreMapping.evidence.length > 0 
     ? mitreMapping.evidence 
     : (decision?.evidence && decision.evidence.length > 0 ? decision.evidence : [
-        'Anomalous TCP SYN packet burst exceeding 10x baseline',
-        'Continuous probe sequence targeting privileged internal ports',
-        'High entropy destination distribution across subnet'
+        'Baseline operational network traffic recorded.'
       ]);
 
   const mitigations = mitreMapping?.mitigations && mitreMapping.mitigations.length > 0
     ? mitreMapping.mitigations
     : [
-        'Enforce stateless TCP SYN cookies on perimeter routers (RFC 4987).',
-        'Dynamic rate-limiting on border firewall for half-open connection attempts.',
-        'Quarantine affected source IP addresses into blackhole routing tables.',
-        'Deploy behavioral honeypot lures on sensitive ephemeral service ports.'
+        'Baseline security telemetry operating within standard threshold limits. No active countermeasures required.'
       ];
 
   const handleCopyMitigation = (text: string, index: number) => {

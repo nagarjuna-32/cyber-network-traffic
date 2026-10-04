@@ -45,15 +45,7 @@ export const XaiPipelineView: React.FC<XaiPipelineViewProps> = ({
   const explanationText = explainability?.explanation || 
     `Prediction of ${decision?.current_state || 'NORMAL'} (Threat Score: ${decision?.threat_score ?? 0}) is governed by statistical traffic dynamics and feature attribution metrics.`;
 
-  const featureWeights = explainability?.feature_contributions || {
-    src_port: 0.95,
-    bytes_per_packet: 0.88,
-    ack_count: 0.76,
-    byte_count: 0.65,
-    packet_rate: 0.54,
-    flow_duration: 0.42,
-    port_entropy: 0.31,
-  };
+  const featureWeights = explainability?.feature_contributions || {};
 
   const sortedFeatures = Object.entries(featureWeights)
     .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
@@ -123,35 +115,41 @@ export const XaiPipelineView: React.FC<XaiPipelineViewProps> = ({
           </div>
 
           {/* Horizontal attribution bars */}
-          <div className="space-y-3.5">
-            {sortedFeatures.map(([featureName, weight]) => {
-              const isPositive = weight >= 0;
-              const absVal = Math.min(Math.abs(weight), 1.0);
-              const percentage = Math.round(absVal * 100);
+          {sortedFeatures.length === 0 ? (
+            <div className="py-8 text-center text-xs font-mono text-slate-500 bg-slate-950/40 rounded-xl border border-slate-800">
+              Awaiting XAI feature attribution weights from active inference pipeline...
+            </div>
+          ) : (
+            <div className="space-y-3.5">
+              {sortedFeatures.map(([featureName, weight]) => {
+                const isPositive = weight >= 0;
+                const absVal = Math.min(Math.abs(weight), 1.0);
+                const percentage = Math.round(absVal * 100);
 
-              return (
-                <div key={featureName} className="space-y-1">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-mono text-slate-300 font-medium">{featureName}</span>
-                    <span className={`font-mono text-[11px] font-semibold ${isPositive ? 'text-red-400' : 'text-emerald-400'}`}>
-                      {isPositive ? `+${weight.toFixed(4)}` : weight.toFixed(4)}
-                    </span>
+                return (
+                  <div key={featureName} className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-mono text-slate-300 font-medium">{featureName}</span>
+                      <span className={`font-mono text-[11px] font-semibold ${isPositive ? 'text-red-400' : 'text-emerald-400'}`}>
+                        {isPositive ? `+${weight.toFixed(4)}` : weight.toFixed(4)}
+                      </span>
+                    </div>
+                    
+                    <div className="h-2 w-full bg-slate-950 rounded-full overflow-hidden flex">
+                      <div 
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          isPositive 
+                            ? 'bg-gradient-to-r from-red-500 to-pink-500 shadow-sm shadow-red-500/50' 
+                            : 'bg-gradient-to-r from-emerald-500 to-teal-400 shadow-sm shadow-emerald-500/50'
+                        }`}
+                        style={{ width: `${Math.max(percentage, 5)}%` }}
+                      />
+                    </div>
                   </div>
-                  
-                  <div className="h-2 w-full bg-slate-950 rounded-full overflow-hidden flex">
-                    <div 
-                      className={`h-full rounded-full transition-all duration-500 ${
-                        isPositive 
-                          ? 'bg-gradient-to-r from-red-500 to-pink-500 shadow-sm shadow-red-500/50' 
-                          : 'bg-gradient-to-r from-emerald-500 to-teal-400 shadow-sm shadow-emerald-500/50'
-                      }`}
-                      style={{ width: `${Math.max(percentage, 5)}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Right: Observed Features Matrix (5 cols) */}
@@ -163,7 +161,7 @@ export const XaiPipelineView: React.FC<XaiPipelineViewProps> = ({
                 <span>Computed Telemetry Vector (Features)</span>
               </div>
               <span className="text-[11px] font-mono text-cyan-400">
-                {Object.keys(rawFeatures).length > 0 ? `${Object.keys(rawFeatures).length} Active` : 'Standard Vector'}
+                {Object.keys(rawFeatures).length > 0 ? `${Object.keys(rawFeatures).length} Active` : 'Pipeline Vector'}
               </span>
             </div>
 
@@ -176,28 +174,16 @@ export const XaiPipelineView: React.FC<XaiPipelineViewProps> = ({
                   </div>
                 ))
               ) : (
-                [
-                  { k: 'packet_rate', v: '10.57 pkts/sec' },
-                  { k: 'byte_rate', v: '1,500 B/s' },
-                  { k: 'connection_frequency', v: '1.00 conn/s' },
-                  { k: 'inter_arrival_time', v: '0.100 s' },
-                  { k: 'port_entropy', v: '1.42 bits' },
-                  { k: 'syn_ack_ratio', v: '1.00' },
-                  { k: 'flow_duration', v: '12.45 s' },
-                  { k: 'byte_asymmetry', v: '0.15' },
-                ].map(({ k, v }) => (
-                  <div key={k} className="p-2 rounded-lg bg-slate-950/70 border border-slate-800/80 flex items-center justify-between text-xs font-mono">
-                    <span className="text-slate-400">{k}</span>
-                    <span className="text-cyan-300 font-semibold">{v}</span>
-                  </div>
-                ))
+                <div className="py-8 text-center text-xs font-mono text-slate-500 bg-slate-950/40 rounded-xl border border-slate-800">
+                  Awaiting live telemetry feature vector from active pipeline stream...
+                </div>
               )}
             </div>
           </div>
 
           <div className="mt-4 pt-3 border-t border-slate-800 text-[11px] text-slate-400 flex items-center justify-between font-mono">
             <span>Model: Dual-Head GRU (2 Layers)</span>
-            <span className="text-emerald-400">Loss: 0.041 (Trained)</span>
+            <span className="text-emerald-400">Pipeline: Live Inference</span>
           </div>
         </div>
 

@@ -12,19 +12,16 @@ export const ThreatScoreGraph: React.FC<ThreatScoreGraphProps> = ({ decision }) 
   const currentScore = decision?.threat_score ?? 0;
   const rawForecast = decision?.forecast || [];
 
-  // 4 Points: Current, +5s, +10s, +15s
+  // Points: Current, followed by actual forecast points from live model rollout
+  const forecastPoints = rawForecast.map((f: any) => ({
+    label: `+${f.step * 5}s`,
+    score: Number(f.threat_score ?? 0),
+    time: `+${f.step * 5} sec`,
+  }));
+
   const points = [
     { label: 'Current', score: currentScore, time: 'Now' },
-    ...([1, 2, 3].map((step) => {
-      const found = rawForecast.find((f: any) => f.step === step);
-      if (found) {
-        return { label: `+${step * 5}s`, score: found.threat_score, time: `+${step * 5} sec` };
-      }
-      const nextState = (decision?.predicted_next_state || 'NORMAL').toUpperCase();
-      const isAtt = nextState === 'ATTACK';
-      const fallbackScore = isAtt ? Math.min(100, currentScore + step * 5) : Math.max(5, currentScore - step * 5);
-      return { label: `+${step * 5}s`, score: fallbackScore, time: `+${step * 5} sec` };
-    }))
+    ...forecastPoints,
   ];
 
   // SVG Chart dimensions
@@ -37,7 +34,7 @@ export const ThreatScoreGraph: React.FC<ThreatScoreGraphProps> = ({ decision }) 
 
   // Coordinate mapping
   const coords = points.map((p, idx) => {
-    const x = paddingX + (idx / (points.length - 1)) * innerWidth;
+    const x = paddingX + (points.length > 1 ? (idx / (points.length - 1)) * innerWidth : innerWidth / 2);
     const y = paddingY + innerHeight - (Math.min(Math.max(p.score, 0), 100) / 100) * innerHeight;
     return { ...p, x, y };
   });

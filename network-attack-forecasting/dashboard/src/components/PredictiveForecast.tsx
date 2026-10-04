@@ -23,45 +23,23 @@ export const PredictiveForecast: React.FC<PredictiveForecastProps> = ({ decision
     stage: decision?.current_stage || 'Baseline',
     threat_score: decision?.threat_score ?? 0,
     risk_level: (decision?.risk_level || 'LOW').toUpperCase(),
-    confidence: decision?.confidence ?? 0.85,
+    confidence: Number(decision?.confidence ?? 0),
     isCurrent: true,
   };
 
   const rawForecast = decision?.forecast || [];
   
-  // Format the 3 future forecast steps (+5s, +10s, +15s)
-  const forecastSteps = [1, 2, 3].map((stepIdx) => {
-    const matched = rawForecast.find((f: any) => f.step === stepIdx);
-    if (matched) {
-      return {
-        step: stepIdx,
-        time: `+${stepIdx * 5} sec`,
-        state: matched.state.toUpperCase(),
-        stage: matched.stage,
-        threat_score: matched.threat_score,
-        risk_level: (matched.risk_level || (matched.threat_score >= 70 ? 'CRITICAL' : matched.threat_score >= 40 ? 'MEDIUM' : 'LOW')).toUpperCase(),
-        confidence: matched.confidence,
-        isCurrent: false,
-      };
-    }
-    // Fallback computed from predicted next state if forecast array is empty
-    const nextState = (decision?.predicted_next_state || 'NORMAL').toUpperCase();
-    const nextStage = decision?.predicted_stage || 'Baseline';
-    const nextConf = decision?.prediction_confidence ?? 0.70;
-    const isAtt = nextState === 'ATTACK';
-    const computedScore = isAtt ? Math.min(100, (decision?.threat_score ?? 0) + (stepIdx * 5)) : Math.max(5, (decision?.threat_score ?? 0) - (stepIdx * 5));
-
-    return {
-      step: stepIdx,
-      time: `+${stepIdx * 5} sec`,
-      state: nextState,
-      stage: nextStage,
-      threat_score: computedScore,
-      risk_level: computedScore >= 70 ? 'CRITICAL' : computedScore >= 40 ? 'MEDIUM' : 'LOW',
-      confidence: Math.max(0.3, nextConf - (stepIdx * 0.08)),
-      isCurrent: false,
-    };
-  });
+  // Format the future forecast steps (+5s, +10s, +15s) directly from live AI model rollout
+  const forecastSteps = rawForecast.map((matched: any) => ({
+    step: matched.step,
+    time: `+${matched.step * 5} sec`,
+    state: String(matched.state || 'NORMAL').toUpperCase(),
+    stage: matched.stage || 'Baseline',
+    threat_score: Number(matched.threat_score ?? 0),
+    risk_level: String(matched.risk_level || (matched.threat_score >= 70 ? 'CRITICAL' : matched.threat_score >= 40 ? 'MEDIUM' : 'LOW')).toUpperCase(),
+    confidence: Number(matched.confidence ?? 0),
+    isCurrent: false,
+  }));
 
   const allSteps = [currentStep, ...forecastSteps];
 

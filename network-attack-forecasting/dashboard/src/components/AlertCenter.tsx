@@ -75,11 +75,11 @@ export const AlertCenter: React.FC<AlertCenterProps> = ({ alerts, decision }) =>
           {alerts.map((al, idx) => {
             const sev = (al.severity || 'HIGH').toUpperCase();
             const alertId = al.alert_id || al.id || `ALT-${idx + 101}`;
-            const riskScore = al.risk_score ?? decision?.threat_score ?? 85;
-            const confidence = al.confidence ?? decision?.prediction_confidence ?? 0.88;
-            const stage = al.attack_stage || al.stage || decision?.current_stage || 'Active Exploitation';
-            const mitre = al.mitre_technique_id || 'T1498';
-            const action = al.recommended_action || 'Enforce border rate-limiting and isolate suspicious source IP addresses.';
+            const riskScore = al.risk_score ?? decision?.threat_score ?? 0;
+            const confidence = al.confidence ?? decision?.prediction_confidence ?? 0;
+            const stage = al.attack_stage || al.stage || decision?.current_stage || 'Active Monitoring';
+            const mitre = al.mitre_technique_id || 'N/A';
+            const action = al.recommended_action || 'Inspect incoming packet trace and maintain endpoint security posture.';
 
             return (
               <div 

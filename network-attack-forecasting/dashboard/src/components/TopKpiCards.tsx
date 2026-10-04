@@ -25,13 +25,13 @@ export const TopKpiCards: React.FC<TopKpiCardsProps> = ({ decision, health }) =>
   // Model prediction confidence (favor prediction_confidence if > 0, fallback to confidence)
   const confidenceVal = decision?.prediction_confidence && decision.prediction_confidence > 0 
     ? decision.prediction_confidence 
-    : (decision?.confidence ?? 0.85);
+    : Number(decision?.confidence ?? 0);
   const confidencePercent = (confidenceVal * 100).toFixed(1);
 
   // Latency from API
   const latency = decision?.pipeline_latency_ms && decision.pipeline_latency_ms > 0
     ? decision.pipeline_latency_ms
-    : (health.pipelineLatencyMs || health.inferenceLatencyMs || 20.76);
+    : (health.pipelineLatencyMs || health.inferenceLatencyMs || 0);
 
   // Severity color mapping
   const getStateColor = (s: string) => {

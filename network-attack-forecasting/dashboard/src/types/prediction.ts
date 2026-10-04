@@ -122,7 +122,7 @@ export interface SystemHealthStatus {
   modelLoaded: boolean;
   inferenceLatencyMs: number;
   pipelineLatencyMs?: number;
-  dataSource: 'LIVE_MODEL' | 'VERIFIED_DEMO';
+  dataSource: 'LIVE_MODEL' | 'MODEL_UNAVAILABLE';
   lastUpdated: string;
 }
 

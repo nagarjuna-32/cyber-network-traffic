@@ -12,15 +12,15 @@ export const MitreAttackPanel: React.FC<MitreAttackPanelProps> = ({ mitreMapping
   const tacticId = mitreMapping?.tactic_id || 'TA0043';
   const technique = mitreMapping?.technique || 'Active Scanning';
   const techniqueId = mitreMapping?.technique_id || 'T1595';
-  const confidence = mitreMapping?.confidence ?? decision?.confidence ?? 0.88;
+  const confidence = Number(mitreMapping?.confidence ?? decision?.confidence ?? 0);
 
   const evidence = mitreMapping?.evidence && mitreMapping.evidence.length > 0 
     ? mitreMapping.evidence 
-    : (decision?.evidence && decision.evidence.length > 0 ? decision.evidence : ['Baseline connection cadence']);
+    : (decision?.evidence && decision.evidence.length > 0 ? decision.evidence : ['Baseline operational traffic observed.']);
 
   const mitigations = mitreMapping?.mitigations && mitreMapping.mitigations.length > 0
     ? mitreMapping.mitigations
-    : ['Deploy network edge rate-limiting.', 'Enforce SYN cookies on gateway.'];
+    : ['Standard baseline monitoring active. No mitigation required.'];
 
   return (
     <div className="bg-[#0b101b] rounded-2xl border border-slate-800 p-5 shadow-xl">

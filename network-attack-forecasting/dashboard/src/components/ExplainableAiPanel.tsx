@@ -11,13 +11,7 @@ export const ExplainableAiPanel: React.FC<ExplainableAiPanelProps> = ({ explaina
   const explanation = explainability?.explanation || 
     `Prediction of ${decision?.current_state || 'NORMAL'} (Threat Score: ${decision?.threat_score ?? 0}) is driven by statistical network feature vectors and World Model dynamics.`;
 
-  const featureContributions = explainability?.feature_contributions || {
-    packet_rate: 0.94,
-    byte_rate: 0.88,
-    connection_frequency: 0.72,
-    packet_count: 0.65,
-    inter_arrival_time: -0.15,
-  };
+  const featureContributions = explainability?.feature_contributions || {};
 
   const sortedFeatures = Object.entries(featureContributions)
     .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
@@ -60,33 +54,39 @@ export const ExplainableAiPanel: React.FC<ExplainableAiPanelProps> = ({ explaina
           <span>Weight</span>
         </div>
 
-        <div className="space-y-2.5">
-          {sortedFeatures.map(([feat, val]) => {
-            const isPos = val >= 0;
-            const absVal = Math.min(Math.abs(val), 1.0);
-            const percent = Math.round(absVal * 100);
+        {sortedFeatures.length === 0 ? (
+          <div className="py-5 text-center text-xs font-mono text-slate-500 bg-slate-900/40 rounded-xl border border-slate-800">
+            Awaiting XAI feature attribution weights from active inference pipeline...
+          </div>
+        ) : (
+          <div className="space-y-2.5">
+            {sortedFeatures.map(([feat, val]) => {
+              const isPos = val >= 0;
+              const absVal = Math.min(Math.abs(val), 1.0);
+              const percent = Math.round(absVal * 100);
 
-            return (
-              <div key={feat} className="space-y-1">
-                <div className="flex items-center justify-between text-xs font-mono">
-                  <span className="text-slate-300">{feat}</span>
-                  <span className={`font-bold ${isPos ? 'text-red-400' : 'text-emerald-400'}`}>
-                    {isPos ? `+${val.toFixed(2)}` : val.toFixed(2)}
-                  </span>
-                </div>
+              return (
+                <div key={feat} className="space-y-1">
+                  <div className="flex items-center justify-between text-xs font-mono">
+                    <span className="text-slate-300">{feat}</span>
+                    <span className={`font-bold ${isPos ? 'text-red-400' : 'text-emerald-400'}`}>
+                      {isPos ? `+${val.toFixed(2)}` : val.toFixed(2)}
+                    </span>
+                  </div>
 
-                <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden flex">
-                  <div
-                    className={`h-full rounded-full transition-all duration-500 ${
-                      isPos ? 'bg-gradient-to-r from-orange-500 to-red-500' : 'bg-gradient-to-r from-teal-500 to-emerald-400'
-                    }`}
-                    style={{ width: `${Math.max(percent, 5)}%` }}
-                  />
+                  <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden flex">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        isPos ? 'bg-gradient-to-r from-orange-500 to-red-500' : 'bg-gradient-to-r from-teal-500 to-emerald-400'
+                      }`}
+                      style={{ width: `${Math.max(percent, 5)}%` }}
+                    />
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
     </div>

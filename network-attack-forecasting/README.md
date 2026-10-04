@@ -44,7 +44,7 @@ All core modules have been fully implemented, integrated, validated, and tested 
 | **Explainable AI (XAI)** | 🟢 Complete | Feature attribution vectors and natural-language SOC explanation narratives |
 | **Alert Engine** | 🟢 Complete | Real-time threshold evaluation with recommended SOC containment playbooks |
 | **FastAPI REST API** | 🟢 Complete | High-performance endpoints with real measured inference latency telemetry |
-| **React SOC Dashboard** | 🟢 Complete | Vite + React 18 + Tailwind CSS interface with Live Model and Verified Demo modes |
+| **React SOC Dashboard** | 🟢 Complete | Vite + React 18 + Tailwind CSS interface with pure Live Model inference & SOC controls |
 | **Cross-Platform Support** | 🟢 Complete | Native scripts for Windows (`run.bat`), Linux/macOS (`run.sh`), and Docker |
 | **Test Verification** | 🟢 Complete | **53/53 tests passing** (Preprocessing: 9, Models: 20, Engine: 13, Pipeline: 11) |
 
@@ -435,10 +435,8 @@ When the backend runs, interactive Swagger documentation is available at **`http
 Open [**`http://localhost:5173`**](http://localhost:5173) in your web browser:
 
 1. **Header Bar:** Displays live backend connection status, model status, and measured latency (`~6 ms`).
-2. **Mode Switcher:**
-   - **`Target: Live Backend API (/api)`**: Connects to the real FastAPI backend and GRU model.
-   - **`Target: Verified Demo Mode`**: Standalone evaluation using pre-packaged offline telemetry.
-3. **Scenario Test Buttons:** Trigger on-demand live simulation runs (`Normal`, `Elevated`, `Suspicious`, `Attack`, `Recovery`).
+2. **Live Telemetry & Health:** Real-time polling with health monitoring, model state indicators, and measured latency.
+3. **Attack Simulation Lab:** Trigger on-demand live attack simulation runs (`Normal`, `Scanning`, `SYN Flood`, `DDoS`, `Beaconing`, `UDP Attack`, `Mixed`).
 4. **World Model Transition Diagram:** Visualizes current state vs. forecasted next state with confidence bars.
 5. **Security State Cards:** Displays compound Threat Score, Risk Level, Attack Stage, and Model Confidence.
 6. **Evidence & Feature Panel:** Identifies driving anomalies and traffic distributions.
@@ -529,7 +527,6 @@ cyber-network-traffic/
     │   │   ├── components/         # UI Components (Header, Cards, Timeline, Alerts, etc.)
     │   │   ├── services/api.ts     # API client with strict Live Model policy
     │   │   ├── types/prediction.ts # TypeScript interfaces mirroring Python schemas
-    │   │   ├── data/mockScenarios.ts # Verified offline demo telemetry
     │   │   └── App.tsx             # Root dashboard component
     │   ├── package.json
     │   └── vite.config.ts

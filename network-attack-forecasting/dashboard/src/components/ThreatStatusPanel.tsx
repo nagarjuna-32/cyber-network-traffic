@@ -27,7 +27,7 @@ export const ThreatStatusPanel: React.FC<ThreatStatusPanelProps> = ({ decision }
   const currentStage = decision?.current_stage || 'Baseline';
   const threatScore = decision?.threat_score ?? 0;
   const riskLevel = (decision?.risk_level || 'LOW').toUpperCase();
-  const confidence = decision?.confidence ?? 0.85;
+  const confidence = Number(decision?.confidence ?? 0);
   const threatType = decision?.threat_type || 'Normal Operations';
 
   const getSeverityBadge = (s: string) => {

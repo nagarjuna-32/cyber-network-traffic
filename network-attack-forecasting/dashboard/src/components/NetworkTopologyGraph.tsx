@@ -13,20 +13,28 @@ export const NetworkTopologyGraph: React.FC<NetworkTopologyGraphProps> = ({
 }) => {
   const [selectedNode, setSelectedNode] = useState<NetworkGraphNode | null>(null);
 
-  const nodes = graph?.nodes || [
-    { id: '192.168.4.197', degree: 3, in_degree: 0, out_degree: 3, bytes_sent: 4500000, bytes_recv: 0 },
-    { id: '192.168.4.249', degree: 1, in_degree: 1, out_degree: 0, bytes_sent: 0, bytes_recv: 900000 },
-    { id: '10.0.0.1', degree: 2, in_degree: 2, out_degree: 0, bytes_sent: 12000, bytes_recv: 3600000 },
-  ];
+  const nodes = graph?.nodes || [];
+  const edges = graph?.edges || [];
 
-  const edges = graph?.edges || [
-    { source: '192.168.4.197', target: '10.0.0.1', weight: 3600000, packet_count: 24000, flow_count: 150, protocol: 'TCP' },
-    { source: '192.168.4.197', target: '192.168.4.249', weight: 900000, packet_count: 1100, flow_count: 25, protocol: 'TCP' },
-  ];
+  if (nodes.length === 0) {
+    return (
+      <div className="bg-[#0b101b] rounded-2xl border border-slate-800 p-5 shadow-xl">
+        <div className="flex items-center space-x-2 text-[11px] font-mono font-semibold text-cyan-400 uppercase tracking-wider pb-3 border-b border-slate-800 mb-3">
+          <Network className="h-4 w-4" />
+          <span>Topological Attack Flow Graph G(V, E)</span>
+        </div>
+        <div className="py-12 text-center">
+          <Network className="h-10 w-10 text-slate-600 mx-auto mb-2 animate-pulse" />
+          <h4 className="text-sm font-semibold text-slate-300">Awaiting Real-Time Flow Graph Telemetry</h4>
+          <p className="text-xs text-slate-500 mt-1">Network nodes and active transport links generate dynamically as traffic streams through the pipeline.</p>
+        </div>
+      </div>
+    );
+  }
 
   const numNodes = graph?.num_nodes || nodes.length;
   const numEdges = graph?.num_edges || edges.length;
-  const starScore = graph?.star_score ?? 0.82;
+  const starScore = graph?.star_score ?? 0;
   const maxDegreeNode = graph?.max_degree_node || nodes[0]?.id || 'N/A';
 
   const isAttack = currentState.toUpperCase() === 'ATTACK';
