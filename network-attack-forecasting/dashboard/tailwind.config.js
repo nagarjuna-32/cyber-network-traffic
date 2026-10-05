@@ -8,23 +8,27 @@ export default {
   theme: {
     extend: {
       colors: {
-        cyber: {
-          bg: '#0a0d14',
-          card: '#111726',
+        soc: {
+          bg: '#080d1a',
+          surface: '#0f172a',
+          card: '#131e33',
+          cardHover: '#182642',
           border: '#1e293b',
-          muted: '#64748b',
-          accent: '#38bdf8',
-          normal: '#10b981',
-          elevated: '#f59e0b',
-          suspicious: '#f97316',
-          predicted: '#ec4899',
-          attack: '#ef4444',
-          recovery: '#8b5cf6',
+          borderLight: '#334155',
+          textMuted: '#94a3b8',
+          textBright: '#f8fafc',
+          normal: '#10b981',    // green
+          warning: '#f59e0b',   // yellow
+          suspicious: '#f97316',// orange
+          critical: '#ef4444',  // red
+          prediction: '#3b82f6',// blue
+          ai: '#8b5cf6',        // purple
+          cyan: '#06b6d4',      // cyan
         }
       },
-      animation: {
-        'pulse-fast': 'pulse 1.2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'ping-slow': 'ping 2s cubic-bezier(0, 0, 0.2, 1) infinite',
+      fontFamily: {
+        mono: ['JetBrains Mono', 'Consolas', 'Fira Code', 'monospace'],
+        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
       }
     },
   },
