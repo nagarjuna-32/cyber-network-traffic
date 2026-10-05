@@ -53,7 +53,7 @@ Communicates the paradigm shift from traditional reactive intrusion detection (*
    - Real-time health monitoring of Frontend, REST API, ML World Model, Forecasting Engine, Simulation Engine, Feature Store, and MITRE Mapper.
 
 10. **Platform Configuration (`/settings`)**:
-    - Centralized API endpoint configuration (`VITE_API_BASE_URL`), demo mode switch, and early warning probability thresholds.
+    - Centralized API endpoint configuration (`VITE_API_URL`), custom backend overrides, and early warning probability thresholds.
 
 ---
 
@@ -78,8 +78,7 @@ npm install
 ### 2. Configure Environment
 Create `.env` or use `.env.example`:
 ```env
-VITE_API_BASE_URL=http://localhost:8000
-VITE_DEMO_MODE=false
+VITE_API_URL=https://cyber-network-traffic.onrender.com
 ```
 
 ### 3. Start Development Server

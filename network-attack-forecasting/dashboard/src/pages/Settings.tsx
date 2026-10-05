@@ -9,8 +9,18 @@ export const Settings: React.FC = () => {
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+    if (typeof window !== 'undefined' && window.localStorage) {
+      if (apiUrl.trim()) {
+        window.localStorage.setItem('NETSCOPE_API_URL', apiUrl.trim());
+      } else {
+        window.localStorage.removeItem('NETSCOPE_API_URL');
+      }
+    }
     setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    setTimeout(() => {
+      setSaved(false);
+      window.location.reload();
+    }, 800);
   };
 
   return (
@@ -34,17 +44,17 @@ export const Settings: React.FC = () => {
           <div className="space-y-4 font-mono text-xs">
             <div>
               <label className="block text-slate-400 mb-1.5 uppercase tracking-wider text-[11px]">
-                API Base URL (Environment: VITE_API_BASE_URL)
+                API Base URL (Environment: VITE_API_URL)
               </label>
               <input
                 type="text"
                 value={apiUrl}
                 onChange={(e) => setApiUrl(e.target.value)}
-                placeholder="http://localhost:8000"
+                placeholder="https://cyber-network-traffic.onrender.com"
                 className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:border-blue-500 font-mono"
               />
               <span className="text-[10px] text-slate-500 mt-1 block">
-                Current: {apiUrl}. Configurable for cloud environments (Render, Railway, VPS, Docker).
+                Production Backend: https://cyber-network-traffic.onrender.com
               </span>
             </div>
           </div>

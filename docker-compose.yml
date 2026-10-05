@@ -9,7 +9,7 @@ services:
       - "8000:8000"
     environment:
       - PYTHONUNBUFFERED=1
-      - ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://localhost:8000,http://localhost
+      - ALLOWED_ORIGINS=https://cyber-network-traffic.vercel.app,http://localhost:5173,http://127.0.0.1:5173,http://localhost:8000,http://localhost
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s

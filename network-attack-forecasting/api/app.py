@@ -78,27 +78,36 @@ app = FastAPI(
 )
 
 # CORS configuration: configurable through ALLOWED_ORIGINS env var
+# Explicitly authorize deployed Vercel frontend, Vercel preview branches, and local dev
+DEFAULT_ALLOWED_ORIGINS = [
+    "https://cyber-network-traffic.vercel.app",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+    "http://localhost",
+]
+
 allowed_origins_raw = os.getenv("ALLOWED_ORIGINS", "")
+allowed_origins = list(DEFAULT_ALLOWED_ORIGINS)
+
 if allowed_origins_raw.strip():
-    allowed_origins = [o.strip() for o in allowed_origins_raw.split(",") if o.strip()]
-    allow_credentials = "*" not in allowed_origins
-else:
-    allowed_origins = [
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:8000",
-        "http://127.0.0.1:8000",
-        "http://localhost",
-    ]
-    allow_credentials = True
+    for o in allowed_origins_raw.split(","):
+        cleaned = o.strip().rstrip("/")
+        if cleaned and cleaned not in allowed_origins:
+            allowed_origins.append(cleaned)
+
+# Secure credentials policy: wildcard '*' is never used with credentials
+allow_credentials = "*" not in allowed_origins
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
+    allow_origin_regex=r"^https://cyber-network-traffic.*\.vercel\.app$",
     allow_credentials=allow_credentials,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"],
     allow_headers=["*"],
 )
 
