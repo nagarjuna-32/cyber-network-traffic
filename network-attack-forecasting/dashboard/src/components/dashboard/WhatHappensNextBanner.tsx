@@ -39,7 +39,7 @@ export const WhatHappensNextBanner: React.FC<WhatHappensNextBannerProps> = ({
         <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
           <span className="text-slate-500">Traditional IDS: "Is it bad now?"</span>
           <span className="text-slate-600">→</span>
-          <span className="text-emerald-400 font-semibold">NetScope: "What happens next?"</span>
+          <span className="text-emerald-400 font-semibold">NetForecast: "What happens next?"</span>
         </div>
       </div>
 

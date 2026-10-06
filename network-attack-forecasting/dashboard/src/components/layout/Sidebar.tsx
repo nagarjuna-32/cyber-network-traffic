@@ -14,7 +14,7 @@ export const Sidebar: React.FC = () => {
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="font-bold text-sm tracking-widest text-white uppercase">NETSCOPE AI</span>
+              <span className="font-bold text-sm tracking-widest text-white uppercase">NETFORECAST AI</span>
               <span className="text-[9px] bg-blue-500/20 border border-blue-500/30 text-blue-400 font-mono px-1 py-0.2 rounded">
                 SOC
               </span>

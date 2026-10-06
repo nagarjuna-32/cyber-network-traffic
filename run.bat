@@ -10,7 +10,7 @@ set PROJECT_DIR=%SCRIPT_DIR%network-attack-forecasting
 
 REM 1. Start FastAPI Backend in new window
 echo [1/2] Starting FastAPI Backend on http://127.0.0.1:8000...
-start "NetForecast AI - Backend (FastAPI)" cmd /k "cd /d "%PROJECT_DIR%" && python -m uvicorn api.app:app --host 127.0.0.1 --port 8000"
+start "NetForecast AI - Backend (FastAPI)" cmd /k "cd /d "%PROJECT_DIR%" && .venv\Scripts\python.exe -m uvicorn api.app:app --host 127.0.0.1 --port 8000"
 
 REM 2. Start React Dashboard in new window
 echo [2/2] Starting React Dashboard on http://localhost:5173...
