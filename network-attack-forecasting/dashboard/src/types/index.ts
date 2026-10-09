@@ -291,3 +291,85 @@ export interface SystemStatusResponse {
     active_connections: number;
   };
 }
+
+export interface ForecastStep {
+  step: number;
+  state: SecurityState;
+  stage: string;
+  threat_score: number;
+  risk_level: SeverityLevel;
+  confidence: number;
+}
+
+export interface PredictionTimelinePoint {
+  time: string;
+  timestamp: string;
+  packetRate: number;
+  threatScore: number;
+  state: SecurityState;
+  isForecast: boolean;
+}
+
+export interface NetworkGraphNode {
+  id: string;
+  degree: number;
+  in_degree: number;
+  out_degree: number;
+  bytes_sent: number;
+  bytes_recv: number;
+}
+
+export interface NetworkGraphEdge {
+  source: string;
+  target: string;
+  weight: number;
+  packet_count: number;
+  flow_count: number;
+  protocol: string;
+}
+
+export interface NetworkGraphState {
+  timestamp: number;
+  num_nodes: number;
+  num_edges: number;
+  density: number;
+  max_degree_node: string;
+  max_degree: number;
+  star_score: number;
+  nodes: NetworkGraphNode[];
+  edges: NetworkGraphEdge[];
+}
+
+export interface CurrentPredictionResponse {
+  timestamp: string;
+  current_state: SecurityState;
+  current_stage: string;
+  predicted_next_state: SecurityState;
+  predicted_stage: string;
+  threat_score: number;
+  risk_level: SeverityLevel;
+  confidence: number;
+  prediction_confidence: number;
+  threat_type: string;
+  evidence: string[];
+  forecast: ForecastStep[];
+  alerts: Alert[];
+  timeline: PredictionTimelinePoint[];
+  network_graph?: NetworkGraphState;
+  mitre_mapping?: {
+    tactic: string;
+    tactic_id: string;
+    technique: string;
+    technique_id: string;
+    confidence: number;
+    evidence: string[];
+    mitigations: string[];
+  };
+  explainability?: {
+    important_features: string[];
+    feature_contributions: Record<string, number>;
+    explanation: string;
+  };
+  inferenceLatencyMs?: number;
+  pipelineLatencyMs?: number;
+}

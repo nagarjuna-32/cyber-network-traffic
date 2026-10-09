@@ -16,11 +16,8 @@ export const NAV_ITEMS = [
   { path: '/traffic', label: 'Live Traffic', icon: Activity },
   { path: '/threats', label: 'Threat Detection', icon: ShieldAlert },
   { path: '/forecast', label: 'Attack Forecast', icon: TrendingUp },
-  { path: '/simulation', label: 'Attack Simulation', icon: PlayCircle },
-  { path: '/mitre', label: 'MITRE ATT&CK', icon: Crosshair },
+  { path: '/simulation', label: 'Simulations', icon: PlayCircle },
   { path: '/alerts', label: 'Alerts', icon: Bell },
-  { path: '/model', label: 'Model Insights', icon: Cpu },
-  { path: '/status', label: 'System Status', icon: Server },
   { path: '/settings', label: 'Settings', icon: Settings },
 ];
 

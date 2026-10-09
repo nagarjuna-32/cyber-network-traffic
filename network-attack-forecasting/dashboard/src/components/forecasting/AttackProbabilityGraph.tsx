@@ -30,15 +30,15 @@ export const AttackProbabilityGraph: React.FC<AttackProbabilityGraphProps> = ({ 
     <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-5">
       <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-800">
         <div>
-          <h3 className="text-sm font-semibold tracking-wider text-slate-100 uppercase">
-            Attack Probability Trajectory & Confidence Envelope
+          <h3 className="text-sm font-semibold tracking-wide text-slate-100">
+            Attack Probability Trajectory
           </h3>
           <p className="text-xs text-slate-400 mt-0.5">
-            Statistical projection $P(\text&#123;Attack&#125; \mid S_{'{t+k}'})$ with 90% Bayesian Credible Interval
+            Projected threat likelihood across observation steps with confidence interval
           </p>
         </div>
-        <span className="text-xs font-mono text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20">
-          Uncertainty Calibrated
+        <span className="text-xs text-blue-400 bg-blue-500/10 px-2.5 py-0.5 rounded border border-blue-500/20 font-medium">
+          Calibrated Forecast
         </span>
       </div>
 

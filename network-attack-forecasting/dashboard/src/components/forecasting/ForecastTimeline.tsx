@@ -17,11 +17,11 @@ export const ForecastTimeline: React.FC<ForecastTimelineProps> = ({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-semibold tracking-wider text-slate-100 uppercase">
-            Multi-Horizon Future State Timeline
+          <h3 className="text-sm font-semibold tracking-wide text-slate-100">
+            Multi-Step Future State Progression
           </h3>
           <p className="text-xs text-slate-400 mt-0.5">
-            Autoregressive sequence extrapolation: $S_t \rightarrow \hat&#123;S&#125;_{'{t+1}'} \dots \hat&#123;S&#125;_{'{t+K}'}$
+            Projected security state transitions over future observation steps
           </p>
         </div>
         <span className="text-xs font-mono text-blue-400 bg-blue-500/10 px-2.5 py-1 rounded border border-blue-500/20">

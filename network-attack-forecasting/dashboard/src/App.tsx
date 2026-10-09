@@ -6,10 +6,7 @@ import { TrafficAnalysis } from './pages/TrafficAnalysis';
 import { ThreatDetection } from './pages/ThreatDetection';
 import { AttackForecast } from './pages/AttackForecast';
 import { Simulation } from './pages/Simulation';
-import { MITRE } from './pages/MITRE';
 import { Alerts } from './pages/Alerts';
-import { ModelInsights } from './pages/ModelInsights';
-import { SystemStatus } from './pages/SystemStatus';
 import { Settings } from './pages/Settings';
 
 export function App() {
@@ -23,11 +20,13 @@ export function App() {
           <Route path="/threats" element={<ThreatDetection />} />
           <Route path="/forecast" element={<AttackForecast />} />
           <Route path="/simulation" element={<Simulation />} />
-          <Route path="/mitre" element={<MITRE />} />
           <Route path="/alerts" element={<Alerts />} />
-          <Route path="/model" element={<ModelInsights />} />
-          <Route path="/status" element={<SystemStatus />} />
           <Route path="/settings" element={<Settings />} />
+
+          {/* Legacy navigation redirects */}
+          <Route path="/mitre" element={<Navigate to="/threats" replace />} />
+          <Route path="/model" element={<Navigate to="/forecast" replace />} />
+          <Route path="/status" element={<Navigate to="/settings" replace />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
       </Routes>

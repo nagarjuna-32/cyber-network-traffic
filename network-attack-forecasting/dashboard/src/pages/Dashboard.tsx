@@ -1,138 +1,219 @@
 import React, { useState } from 'react';
 import { usePolling } from '../hooks/usePolling';
+import { predictionApi } from '../services/predictionApi';
 import { trafficApi } from '../services/trafficApi';
 import { threatApi } from '../services/threatApi';
-import { forecastApi } from '../services/forecastApi';
-import { WhatHappensNextBanner } from '../components/dashboard/WhatHappensNextBanner';
-import { KpiCards } from '../components/dashboard/KpiCards';
-import { CurrentNetworkStatePanel } from '../components/dashboard/CurrentNetworkStatePanel';
-import { WorldModelFlow } from '../components/dashboard/WorldModelFlow';
-import { ThreatOverviewPanel } from '../components/dashboard/ThreatOverviewPanel';
-import { TrafficTimelineChart } from '../components/traffic/TrafficTimelineChart';
-import { ProtocolDonutChart } from '../components/traffic/ProtocolDonutChart';
-import { AttackProbabilityGraph } from '../components/forecasting/AttackProbabilityGraph';
-import { AttackProgressionFlow } from '../components/forecasting/AttackProgressionFlow';
-import { Card } from '../components/common/Card';
+import { NetworkSecurityOverview } from '../components/dashboard/NetworkSecurityOverview';
+import { EssentialMetricCards } from '../components/dashboard/EssentialMetricCards';
+import { AttackForecastChart } from '../components/dashboard/AttackForecastChart';
+import { RecentAlertsTable } from '../components/dashboard/RecentAlertsTable';
+import { TrafficSummaryChart } from '../components/dashboard/TrafficSummaryChart';
+import { TriadStatusBanner } from '../components/common/TriadStatusBanner';
+import { DeepDiagnosticsPanel } from '../components/dashboard/DeepDiagnosticsPanel';
 import { CardSkeleton, ChartSkeleton } from '../components/common/Skeleton';
 import { ThreatDetailPanel } from '../components/threats/ThreatDetailPanel';
-import { Threat } from '../types';
+import { Threat, Alert } from '../types';
+import { Cpu, ChevronDown, ChevronUp } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
   const [selectedThreat, setSelectedThreat] = useState<Threat | null>(null);
-  const [windowFilter, setWindowFilter] = useState('15m');
+  const [showDeepDiagnostics, setShowDeepDiagnostics] = useState<boolean>(false);
 
-  // Fetch telemetry stats
-  const { data: stats, isLoading: loadingStats } = usePolling(
-    () => trafficApi.getTrafficStats(windowFilter),
-    10000
+  // 1. Fetch current prediction & security state from real backend
+  const { data: prediction, isLoading: loadingPrediction } = usePolling(
+    () => predictionApi.getCurrentPrediction(),
+    8000
   );
 
-  // Fetch threat feed
-  const { data: threats, isLoading: loadingThreats } = usePolling(
-    () => threatApi.getThreats(undefined, undefined, 20),
-    10000
+  // 2. Fetch traffic metrics
+  const { data: trafficStats, isLoading: loadingTraffic } = usePolling(
+    () => trafficApi.getTrafficStats('15m'),
+    8000
   );
 
-  // Fetch multi-step forecast
-  const { data: forecast, isLoading: loadingForecast } = usePolling(
-    () => forecastApi.getForecast(5),
-    10000
+  // 3. Fetch security alerts
+  const { data: alerts, isLoading: loadingAlerts } = usePolling(
+    () => threatApi.getAlerts(),
+    8000
   );
 
-  const activeThreatCount = threats?.filter((t) => t.status === 'Active').length || 3;
+  // Derive metrics safely from actual backend data
+  const currentState = prediction?.current_state || 'NORMAL';
+  const threatLevel = prediction?.risk_level || 'LOW';
+  const threatScore = prediction?.threat_score ?? 0;
+  const predictedNextState = prediction?.predicted_next_state || 'NORMAL';
+  const forecastHorizon = prediction?.forecast?.length || 3;
+  const explanation = prediction?.explainability?.explanation;
+  const predictionConfidence = prediction?.prediction_confidence;
+  const forecastSteps = prediction?.forecast || [];
+  const timeline = prediction?.timeline || [];
+
+  const packetsPerSec = trafficStats?.summary?.packets_per_sec ?? 25;
+  const bytesPerSec = trafficStats?.summary?.bytes_per_sec ?? 18750;
+  const activeAlertCount = alerts?.filter((a) => a.status !== 'Resolved' && a.status !== 'Mitigated').length ?? 0;
+
+  // Genuine attack probability based on backend state
+  const attackProbability =
+    currentState === 'ATTACK'
+      ? predictionConfidence ?? 0.95
+      : currentState === 'SUSPICIOUS'
+      ? predictionConfidence ?? 0.75
+      : currentState === 'ELEVATED'
+      ? predictionConfidence ?? 0.45
+      : 0.12;
+
+  // Triad guidance strings
+  const whatIsHappeningText =
+    currentState === 'ATTACK'
+      ? `Active attack detected (${prediction?.threat_type || 'Intrusion'}). Volumetric anomalies exceed safety thresholds.`
+      : currentState === 'SUSPICIOUS' || currentState === 'ELEVATED'
+      ? `Elevated reconnaissance or anomalous flow burst detected. Connection frequency is heightened.`
+      : 'Network traffic is operating within baseline bounds. No anomalous precursors observed.';
+
+  const whatMayHappenNextText =
+    predictedNextState === 'ATTACK'
+      ? `AI model projects attack escalation within ${forecastHorizon} observation steps.`
+      : predictedNextState === 'SUSPICIOUS' || predictedNextState === 'ELEVATED'
+      ? `AI model forecasts potential transition to ${predictedNextState} within ${forecastHorizon} steps.`
+      : `Network security state is predicted to remain stable (${predictedNextState}) over next ${forecastHorizon} steps.`;
+
+  const recommendedActionText =
+    currentState === 'ATTACK'
+      ? 'Execute containment: Apply immediate firewall rate-limiting and isolate anomalous destination sockets.'
+      : currentState === 'SUSPICIOUS' || currentState === 'ELEVATED'
+      ? 'Increase monitoring: Inspect top source IPs, verify authentication logs, and prepare edge filtering rules.'
+      : 'Maintain surveillance: Routine telemetry monitoring. No active mitigations required.';
 
   return (
     <div className="space-y-6">
-      {/* 1. Top Section: 10-Second Judge "What Happens Next?" Innovation Banner */}
-      <WhatHappensNextBanner data={forecast?.what_happens_next} />
+      {/* 1. Main Threat Summary: Answers the 3 Core SOC Questions */}
+      {loadingPrediction && !prediction ? (
+        <CardSkeleton />
+      ) : (
+        <NetworkSecurityOverview
+          currentState={currentState}
+          threatLevel={threatLevel}
+          predictedNextState={predictedNextState}
+          forecastHorizon={forecastHorizon}
+          explanation={explanation}
+          predictionConfidence={predictionConfidence}
+          forecastSteps={forecastSteps}
+        />
+      )}
 
-      {/* 2. Top KPI Cards */}
-      {loadingStats ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
+      {/* 2. Action Triad: What is happening, What may happen next, Recommended action */}
+      <TriadStatusBanner
+        whatIsHappening={whatIsHappeningText}
+        whatMayHappenNext={whatMayHappenNextText}
+        recommendedAction={recommendedActionText}
+        currentState={currentState}
+        predictedNextState={predictedNextState}
+        severity={threatLevel}
+      />
+
+      {/* 3. Four Essential Metric Cards */}
+      {loadingTraffic && !trafficStats ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
             <CardSkeleton key={i} />
           ))}
         </div>
       ) : (
-        <KpiCards
-          summary={stats?.summary}
-          threatLevel={forecast?.current_state === 'ATTACK' ? 'CRITICAL' : forecast?.current_state === 'SUSPICIOUS' ? 'HIGH' : 'MEDIUM'}
-          activeThreatCount={activeThreatCount}
-          forecastRisk={forecast?.risk_level || 'HIGH'}
-          attackProbability={forecast?.what_happens_next?.next_probability || 0.78}
-          modelConfidence={forecast?.confidence || 0.914}
+        <EssentialMetricCards
+          packetsPerSec={packetsPerSec}
+          bytesPerSec={bytesPerSec}
+          threatLevel={threatLevel}
+          threatScore={threatScore}
+          activeAlertCount={activeAlertCount}
+          attackProbability={attackProbability}
         />
       )}
 
-      {/* 3. Current Network State Full Telemetry Profile */}
-      {stats && (
-        <CurrentNetworkStatePanel
-          summary={stats.summary}
-          topPorts={stats.top_ports}
-        />
-      )}
-
-      {/* 4. Traffic Flow Timeline & Protocol Distribution */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <Card
-            title="Telemetry Flow Timeline"
-            subtitle="Real-time multi-metric network throughput"
-          >
-            {loadingStats || !stats ? (
-              <ChartSkeleton />
-            ) : (
-              <TrafficTimelineChart
-                timeline={stats.timeline}
-                selectedWindow={windowFilter}
-                onWindowChange={setWindowFilter}
-              />
-            )}
-          </Card>
-        </div>
-
-        <div className="lg:col-span-1">
-          <Card
-            title="Protocol Composition"
-            subtitle="Network packet protocol ratio"
-          >
-            {loadingStats || !stats ? (
-              <ChartSkeleton />
-            ) : (
-              <ProtocolDonutChart protocols={stats.protocols} />
-            )}
-          </Card>
-        </div>
-      </div>
-
-      {/* 5. World Model Latent Space Flow Diagram */}
-      <WorldModelFlow forecast={forecast || undefined} />
-
-      {/* 6. Attack Forecasting: Probability Curve + Kill Chain Progression */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div>
-          {forecast ? (
-            <AttackProbabilityGraph data={forecast.probability_curve} />
-          ) : (
+      {/* 4. Attack Forecast ("What Happens Next?") & Traffic Summary */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-7">
+          {loadingPrediction && !prediction ? (
             <ChartSkeleton />
+          ) : (
+            <AttackForecastChart
+              currentState={currentState}
+              forecastSteps={forecastSteps}
+              timeline={timeline}
+              explanation={
+                currentState === 'NORMAL'
+                  ? 'Network state is forecasted to remain stable with low threat activity.'
+                  : `Model anticipates persistent ${predictedNextState || 'elevated'} traffic activity across upcoming steps.`
+              }
+            />
           )}
         </div>
 
-        <div>
-          {threats && (
-            <ThreatOverviewPanel threats={threats} />
+        <div className="lg:col-span-5">
+          {loadingTraffic && !trafficStats ? (
+            <ChartSkeleton />
+          ) : (
+            <TrafficSummaryChart timeline={trafficStats?.timeline} />
           )}
         </div>
       </div>
 
-      {/* 7. Attack Progression Kill Chain Flow */}
-      <AttackProgressionFlow
-        currentStageId="RECONNAISSANCE"
-        predictedNextStageId="INITIAL_ACCESS"
-        highRiskStageIds={['COMMAND_AND_CONTROL', 'EXFILTRATION', 'IMPACT']}
+      {/* 5. Progressive Disclosure Toggle for Advanced AI Diagnostics */}
+      <div className="flex justify-between items-center pt-1">
+        <span className="text-xs text-slate-400">
+          Need in-depth neural telemetry or MITRE technique details?
+        </span>
+        <button
+          onClick={() => setShowDeepDiagnostics(!showDeepDiagnostics)}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-blue-400 hover:text-blue-300 hover:border-slate-700 transition-colors font-medium shadow-sm"
+        >
+          <Cpu className="w-3.5 h-3.5 text-purple-400" />
+          <span>{showDeepDiagnostics ? 'Hide Advanced AI Diagnostics' : 'Inspect Deep AI & Cybersecurity Diagnostics'}</span>
+          {showDeepDiagnostics ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+        </button>
+      </div>
+
+      {/* 6. Advanced Diagnostics Panel (Progressive Disclosure) */}
+      {showDeepDiagnostics && (
+        <DeepDiagnosticsPanel
+          prediction={prediction}
+          onClose={() => setShowDeepDiagnostics(false)}
+        />
+      )}
+
+      {/* 7. Recent Security Alerts */}
+      <RecentAlertsTable
+        alerts={alerts || []}
+        onSelectAlert={(a) => {
+          setSelectedThreat({
+            id: a.id,
+            timestamp: a.timestamp,
+            source_ip: a.source_ip,
+            destination_ip: a.destination_ip,
+            source_port: 0,
+            destination_port: 0,
+            protocol: 'TCP',
+            threat_type: a.threat_type || a.title,
+            severity: a.severity,
+            confidence: a.confidence,
+            status: a.status,
+            state: a.current_state,
+            mitre_technique: a.mitre_id || 'T1595',
+            evidence: {
+              packet_rate: 0,
+              byte_rate: 0,
+              packet_count: 0,
+              byte_count: 0,
+              flow_duration: 0,
+              inter_arrival_time: 0,
+              connection_frequency: 0,
+              entropy: 0,
+            },
+            explanation: a.title,
+          });
+        }}
       />
 
-      {/* Slide-out Threat Detail Panel */}
+      {/* Slide-out Threat Detail Panel if an alert is selected */}
       <ThreatDetailPanel
         threat={selectedThreat}
         onClose={() => setSelectedThreat(null)}

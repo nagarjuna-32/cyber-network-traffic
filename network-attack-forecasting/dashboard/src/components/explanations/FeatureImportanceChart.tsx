@@ -24,16 +24,16 @@ export const FeatureImportanceChart: React.FC<FeatureImportanceChartProps> = ({
     <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-5 space-y-4">
       <div className="flex items-center justify-between pb-3 border-b border-slate-800">
         <div>
-          <h3 className="text-sm font-semibold tracking-wider text-slate-100 uppercase flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-amber-400" />
-            Explainable AI: Feature Attribution (SHAP / Sensitivity)
+          <h3 className="text-sm font-semibold tracking-wide text-slate-100 flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-blue-400" />
+            Traffic Feature Impact
           </h3>
           <p className="text-xs text-slate-400 mt-0.5">
-            Local & global marginal contributions to attack state prediction
+            Key traffic indicators that influenced this forecast
           </p>
         </div>
-        <span className="text-xs font-mono text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded border border-amber-500/20">
-          Attribution: Shapley Values
+        <span className="text-xs text-blue-400 bg-blue-500/10 px-2.5 py-0.5 rounded border border-blue-500/20 font-medium">
+          Feature Weights
         </span>
       </div>
 
